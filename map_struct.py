@@ -27,19 +27,19 @@ class Vector(object):
 
 
 class Point(object):
-    def __init__(self, pid, px, py):
+    def __init__(self, px, py):
         self.px, self.py = px, py
-        self.pid = pid
+        self.pid = None
 
 
 class MapPoint(Point):
     """
     点表示
-    point([px,py]), pid, link_list, rlink_list
+    px, py, pid, link_list, rlink_list
     在全局维护list, 
     """
-    def __init__(self, pid, px, py):
-        super.__init__(pid, px, py)
+    def __init__(self, px, py):
+        super(MapPoint, self).__init__(px, py)
         self.link_list = []
         self.rlink_list = []
 
@@ -48,3 +48,14 @@ class MapPoint(Point):
 
     def add_rlink(self, edge, node):
         self.rlink_list.append([edge, node])
+
+    def __str__(self):
+        return "{0:.2f},{1:.2f}".format(self.px, self.py)
+
+
+class MapSegment(object):
+    def __init__(self):
+        self.point_list = []
+
+    def add_point(self, map_point):
+        self.point_list.append(map_point)

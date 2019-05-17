@@ -1,13 +1,26 @@
 # -*- coding: utf-8 -*-
 # @Time    : 2019/5/17 16:12
 # @Author  : yhdu@tongwoo.cn
-# @简介    : 
+# @简介    : 获取gps信息
 # @File    : fetchData.py
 
 
 import cx_Oracle
 from datetime import timedelta, datetime
 from geo import bl2xy, calc_dist
+from time import clock
+import os
+os.environ['NLS_LANG'] = 'SIMPLIFIED CHINESE_CHINA.UTF8'
+
+
+def debug_time(func):
+    def wrapper(*args, **kwargs):
+        bt = clock()
+        a = func(*args, **kwargs)
+        et = clock()
+        print "fetch.py", func.__name__, "cost", round(et - bt, 2), "secs"
+        return a
+    return wrapper
 
 
 class TaxiData:
@@ -16,7 +29,11 @@ class TaxiData:
         self.px, self.py, self.stime, self.state, self.speed = px, py, stime, state, speed
         self.car_state, self.direction = car_state, direction
 
+    def __sub__(self, other):
+        return (self.stime - other.stime).total_seconds()
 
+
+@debug_time
 def get_gps_data():
     end_time = datetime(2018, 5, 8, 15, 0, 0)
     conn = cx_Oracle.connect('hz/hz@192.168.11.88:1521/orcl')
@@ -29,7 +46,6 @@ def get_gps_data():
     cursor = conn.cursor()
     cursor.execute(sql, tup)
     veh_trace = {}
-    static_num = {}
     for item in cursor.fetchall():
         lng, lat = map(float, item[0:2])
         if 119 < lng < 121 and 29 < lat < 31:
@@ -47,10 +63,6 @@ def get_gps_data():
                 veh_trace[veh].append(taxi_data)
             except KeyError:
                 veh_trace[veh] = [taxi_data]
-            try:
-                static_num[veh] += 1
-            except KeyError:
-                static_num[veh] = 1
     new_dict = {}
     for veh, trace in veh_trace.iteritems():
         new_trace = []
@@ -59,9 +71,9 @@ def get_gps_data():
             esti = True
             if last_data is not None:
                 dist = calc_dist([data.px, data.py], [last_data.px, last_data.py])
-                dt = (data.stime - last_data.stime).total_seconds()
+                dt = data - last_data
                 # 过滤异常
-                if dt <= 10:
+                if dt <= 5:
                     esti = False
                 elif data.car_state == 1:  # 非精确
                     esti = False
