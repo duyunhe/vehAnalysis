@@ -164,13 +164,13 @@ def connect_and_subscribe(gateway):
         print e
         print 'ActiveMQ not connected!', datetime.now()
         print 'Reconnecting now...'
-        time.sleep(5)
+        time.sleep(15)
         connect_and_subscribe(gateway)
     print "topic {0} connected".format(gateway), datetime.now()
 
 
 def connect_mq():
-    gateways = ['ty']
+    gateways = ['ty', 'ft', 'hq']
     for g in gateways:
         connect_and_subscribe(g)
 
@@ -178,9 +178,10 @@ def connect_mq():
 def check_network():
     fp = open(os.devnull, 'w')
     ret = subprocess.call('ping 192.168.0.102', shell=True, stdout=fp, stderr=fp)
-    print "check", ret
+    # print "check", ret
     if ret:
         connect_mq()
+    fp.close()
 
 
 if __name__ == '__main__':
