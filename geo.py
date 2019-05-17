@@ -2,7 +2,7 @@
 import math
 from ctypes import *
 import numpy as np
-from map_struct import Point, Segment, Vector
+from map_struct import Point, Vector, Segment
 
 dll = WinDLL("E:/job/amap2local/dll/CoordTransDLL.dll")
 
@@ -510,7 +510,7 @@ def wgs84_to_gcj02(lng, lat):
     :param lat: WGS84坐标系的纬度
     :return:
     """
-    if out_of_china(lng, lat):  # 判断是否在国内
+    if in_hz(lng, lat):  # 判断是否在国内
         return lng, lat
     dlat = transformlat(lng - 105.0, lat - 35.0)
     dlng = transformlng(lng - 105.0, lat - 35.0)

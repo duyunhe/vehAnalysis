@@ -7,10 +7,8 @@
 import stomp
 import time
 import logging
-import sys
 import os
 import subprocess
-from datetime import datetime
 import json
 import struct
 import redis
@@ -84,9 +82,6 @@ class My905Listener(stomp.ConnectionListener):
         self.cnt = 0
         self.ticker = time.clock()
 
-    def on_error(self, headers, message):
-        print('received an error %s' % message)
-
     def on_message(self, headers, message):
         message = trans(message)
         isu = message[5:11]
@@ -102,10 +97,11 @@ class My905Listener(stomp.ConnectionListener):
         wglat, wglng = float(lat) / 600000, float(lng) / 600000
         if in_hz(wglat, wglng):
             mlat, mlng = gcj02_to_wgs84(wglat, wglng)
+            x, y = bl2xy(mlat, mlng)
             spd = float(spd) / 10
             # 用json字符串发送
             msg_key = self.gateway[0] + str(self.cnt % 10000000)
-            msg_dict = {'isu': str_isu, 'longi': mlng, 'lati': mlat, 'speed': spd,
+            msg_dict = {'isu': str_isu, 'x': x, 'y': y, 'speed': spd,
                         'speed_time': speed_time, 'pos': pos, 'load': load, 'ort': ort}
             try:
                 msg_json = json.dumps(msg_dict)
@@ -120,41 +116,17 @@ class My905Listener(stomp.ConnectionListener):
                 self.ticker = time.clock()
 
     def on_cnt(self, x):
-        pass
+        print "{1} net-gateway get {0} records cost ".format(INTERVAL_CNT, self.gateway), x, "seconds", datetime.now()
 
     def on_disconnected(self):
         print self.gateway, "disconnected"
         # connect_and_subscribe(self.gateway)
 
 
-class FTListener(My905Listener):
-    def on_cnt(self, x):
-        print "ft net-gateway get {0} records cost ".format(INTERVAL_CNT), x, "seconds", datetime.now()
-
-
-class TYListener(My905Listener):
-    def on_cnt(self, x):
-        print "ty net-gateway get {0} records cost ".format(INTERVAL_CNT), x, "seconds", datetime.now()
-
-
-class HQListener(My905Listener):
-    def on_cnt(self, x):
-        print "hq net-gateway get {0} records cost ".format(INTERVAL_CNT), x, "seconds", datetime.now()
-
-
-def get_listener(gateway):
-    if gateway == 'ty':
-        return TYListener('ty')
-    elif gateway == 'ft':
-        return FTListener('ft')
-    elif gateway == 'hq':
-        return HQListener('hq')
-
-
 def connect_and_subscribe(gateway):
     print 'ActiveMQ connecting...'
     try:
-        listener = get_listener(gateway)
+        listener = My905Listener(gateway)
         c = stomp.Connection10([('192.168.0.102', 61615)])
         c.set_listener('', listener)
         c.start()
