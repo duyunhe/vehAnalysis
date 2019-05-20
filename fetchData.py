@@ -71,13 +71,10 @@ def get_gps_data():
             esti = True
             if last_data is not None:
                 dist = calc_dist([data.px, data.py], [last_data.px, last_data.py])
-                dt = data - last_data
                 # 过滤异常
-                if dt <= 5:
+                if data.car_state == 1:  # 非精确
                     esti = False
-                elif data.car_state == 1:  # 非精确
-                    esti = False
-                elif dist < 15:  # GPS的误差在10米，不准确
+                elif dist < 10:  # GPS的误差在10米，不准确
                     esti = False
             last_data = data
             if esti:

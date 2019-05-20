@@ -4,8 +4,6 @@
 # @简介    : 道路数据结构
 # @File    : map_struct.py
 
-import math
-
 
 class Segment:
     """
@@ -32,6 +30,11 @@ class Point(object):
         self.pid = None
 
 
+class LinkDesc(object):
+    def __init__(self, line, seq, ort):
+        self.line, self.seq, self.ort = line, seq, ort
+
+
 class MapPoint(Point):
     """
     点表示
@@ -43,19 +46,32 @@ class MapPoint(Point):
         self.link_list = []
         self.rlink_list = []
 
-    def add_link(self, edge, node):
-        self.link_list.append([edge, node])
+    def add_link(self, link_desc, point):
+        """
+        :param link_desc: LinkDesc, (line, seq, ort)
+        :param point: MapPoint (link to next point)
+        :return: 
+        """
+        self.link_list.append([link_desc, point])
 
-    def add_rlink(self, edge, node):
-        self.rlink_list.append([edge, node])
+    def add_rlink(self, link_desc, point):
+        """
+        for oneway side, add one reverse link
+        :param link_desc: LinkDesc, (line, seq, ort)
+        :param point: MapPoint (link to prev point)
+        :return: 
+        """
+        self.rlink_list.append([link_desc, point])
 
     def __str__(self):
         return "{0:.2f},{1:.2f}".format(self.px, self.py)
 
 
 class MapSegment(object):
-    def __init__(self):
+    def __init__(self, lid):
         self.point_list = []
+        self.name, self.rank, self.ort = None, None, None
+        self.lid = lid
 
     def add_point(self, map_point):
         self.point_list.append(map_point)
