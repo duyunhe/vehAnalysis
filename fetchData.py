@@ -26,7 +26,7 @@ def debug_time(func):
 class TaxiData:
     def __init__(self, veh, px, py, stime, state, speed, car_state, direction):
         self.veh = veh
-        self.px, self.py, self.stime, self.state, self.speed = px, py, stime, state, speed
+        self.x, self.y, self.stime, self.state, self.speed = px, py, stime, state, speed
         self.car_state, self.direction = car_state, direction
 
     def __sub__(self, other):
@@ -35,12 +35,12 @@ class TaxiData:
 
 @debug_time
 def get_gps_data():
-    end_time = datetime(2018, 5, 8, 15, 0, 0)
+    begin_time = datetime(2018, 5, 21, 4, 0, 0)
     conn = cx_Oracle.connect('hz/hz@192.168.11.88:1521/orcl')
-    begin_time = end_time + timedelta(minutes=-10)
+    end_time = begin_time + timedelta(minutes=60)
     sql = "select px, py, speed_time, state, speed, carstate, direction, vehicle_num from " \
           "TB_GPS_1805 t where speed_time >= :1 " \
-          "and speed_time < :2 and vehicle_num = '浙ATE638' and state = 1 order by speed_time "
+          "and speed_time < :2 and vehicle_num = '浙AT4799' and state = 1 order by speed_time "
 
     tup = (begin_time, end_time)
     cursor = conn.cursor()
@@ -70,7 +70,7 @@ def get_gps_data():
         for data in trace:
             esti = True
             if last_data is not None:
-                dist = calc_dist([data.px, data.py], [last_data.px, last_data.py])
+                dist = calc_dist([data.x, data.y], [last_data.x, last_data.y])
                 # 过滤异常
                 if data.car_state == 1:  # 非精确
                     esti = False

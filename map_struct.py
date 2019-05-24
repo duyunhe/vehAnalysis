@@ -5,28 +5,18 @@
 # @File    : map_struct.py
 
 
-class Segment:
-    """
-    道路中的线段，
-    有方向，SegmentID，begin_point, end_point, road_name
-    """
-    def __init__(self, begin_point=None, end_point=None, name='', sid=0):
-        self.begin_point, self.end_point = begin_point, end_point
-        self.name, self.sid = name, sid
-        self.entrance, self.exit = None, None
-
-
-class Vector(object):
-    def __init__(self, px, py):
-        self.px, self.py = px, py
-
-    def __neg__(self):
-        return Vector(-self.px, -self.py)
+class Segment(object):
+    def __init__(self, begin_pt, end_pt):
+        """
+        :param begin_pt: Point
+        :param end_pt: Point
+        """
+        self.begin_point, self.end_point = begin_pt, end_pt
 
 
 class Point(object):
-    def __init__(self, px, py):
-        self.px, self.py = px, py
+    def __init__(self, x=0, y=0):
+        self.x, self.y = x, y
         self.pid = None
 
 
@@ -38,11 +28,11 @@ class LinkDesc(object):
 class MapPoint(Point):
     """
     点表示
-    px, py, pid, link_list, rlink_list
+    x, y, pid, link_list, rlink_list
     在全局维护list, 
     """
-    def __init__(self, px, py):
-        super(MapPoint, self).__init__(px, py)
+    def __init__(self, x, y):
+        super(MapPoint, self).__init__(x, y)
         self.link_list = []
         self.rlink_list = []
 
@@ -64,7 +54,13 @@ class MapPoint(Point):
         self.rlink_list.append([link_desc, point])
 
     def __str__(self):
-        return "{0:.2f},{1:.2f}".format(self.px, self.py)
+        return "{0:.2f},{1:.2f}".format(self.x, self.y)
+
+    def __hash__(self):
+        return self.pid
+
+    def __eq__(self, other):
+        return self.pid == other.pid
 
 
 class MapSegment(object):
@@ -75,3 +71,6 @@ class MapSegment(object):
 
     def add_point(self, map_point):
         self.point_list.append(map_point)
+
+
+

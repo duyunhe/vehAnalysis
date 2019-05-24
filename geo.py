@@ -2,9 +2,13 @@
 import math
 from ctypes import *
 import numpy as np
-from map_struct import Point, Vector, Segment
+from map_struct import Point
 
 dll = WinDLL("E:/job/amap2local/dll/CoordTransDLL.dll")
+x_pi = 3.14159265358979324 * 3000.0 / 180.0
+pi = 3.1415926535897932384626  # π
+earth_a = 6378245.0  # 长半轴
+ee = 0.00669342162296594323  # 扁率
 
 
 class BLH(Structure):
@@ -43,6 +47,18 @@ def xy2bl(x, y):
     global dll
     dll.HZ_xyH_2_WGS84_BLH(xyz, byref(blh))
     return blh.b, blh.l
+
+
+def calc_point_dist(pt0, pt1):
+    """
+    :param pt0: Point
+    :param pt1: 
+    :return: 
+    """
+    v0 = np.array([pt0.x, pt0.y])
+    v1 = np.array([pt1.x, pt1.y])
+    dist = np.linalg.norm(v0 - v1)
+    return dist
 
 
 def calc_dist(pt0, pt1):
@@ -91,8 +107,8 @@ def calc_include_angle3(seg0, seg1):
     :param seg1: 
     :return: cos a
     """
-    v0 = np.array([seg0.end_point.px - seg0.begin_point.px, seg0.end_point.py - seg0.begin_point.py])
-    v1 = np.array([seg1.end_point.px - seg1.begin_point.px, seg1.end_point.py - seg1.begin_point.py])
+    v0 = np.array([seg0.end_point.x - seg0.begin_point.x, seg0.end_point.y - seg0.begin_point.y])
+    v1 = np.array([seg1.end_point.x - seg1.begin_point.x, seg1.end_point.y - seg1.begin_point.y])
     dt = np.sqrt(np.dot(v0, v0)) * np.sqrt(np.dot(v1, v1))
     if dt == 0:
         return 0
@@ -172,58 +188,52 @@ def point_project_segment(point, segment):
     :param segment: Segment
     :return: Point
     """
-    x, y = point.px, point.py
-    x0, y0 = segment.begin_point.px, segment.begin_point.py
-    x1, y1 = segment.end_point.px, segment.end_point.py
-    pt, _, _ = point_project([x, y], [x0, y0], [x1, y1])
+    pt = [point.px, point.py]
+    p0 = [segment.begin_point.px, segment.begin_point.py]
+    p1 = [segment.end_point.px, segment.end_point.py]
+    pt, _, _ = point_project(pt, p0, p1)
     return Point(pt[0], pt[1])
 
 
-def point_project(point, segment_point0, segment_point1):
+def point_project(point, p0, p1):
     """
     :param point: point to be matched
-    :param segment_point0: segment
-    :param segment_point1: 
+    :param p0: Segment point0
+    :param p1: Segment point1
     :return: projected point, state
-            state 为1 在s0s1的延长线上  
-            state 为-1 在s1s0的延长线上
+            state 为2 在s0s1的延长线上  
+            state 为1 在s1s0的延长线上
     """
     x, y = point[0:2]
-    x0, y0 = segment_point0[0:2]
-    x1, y1 = segment_point1[0:2]
+    x0, y0 = p0[0:2]
+    x1, y1 = p1[0:2]
     ap, ab = np.array([x - x0, y - y0]), np.array([x1 - x0, y1 - y0])
-    ac = np.dot(ap, ab) / (np.dot(ab, ab)) * ab
-    dx, dy = ac[0] + x0, ac[1] + y0
-    state = 0
     if np.dot(ap, ab) < 0:
-        state = -1
-    bp, ba = np.array([x - x1, y - y1]), np.array([x0 - x1, y0 - y1])
-    if np.dot(bp, ba) < 0:
-        state = 1
-    return [dx, dy], ac, state
+        proj_pt = [x0, y0]
+        px, py, state, dist = x0, y0, 1, calc_dist(point, proj_pt)
+    else:
+        bp, ba = np.array([x - x1, y - y1]), np.array([x0 - x1, y0 - y1])
+        if np.dot(bp, ba) < 0:
+            proj_pt = [x1, y1]
+            px, py, state, dist = x1, y1, 2, calc_dist(point, proj_pt)
+        else:
+            ac = np.dot(ap, ab) / (np.dot(ab, ab)) * ab
+            proj_pt = [ac[0] + x0, ac[1] + y0]
+            px, py, state, dist = ac[0] + x0, ac[1] + y0, 0, calc_dist(point, proj_pt)
 
-
-def point2segment2(point, segment):
-    """
-    计算点到线段距离(Point 版) 
-    :param point: Point
-    :param segment: Segment
-    :return: dist
-    """
-    return point2segment([point.px, point.py], [segment.begin_point.px, segment.begin_point.py],
-                         [segment.end_point.px, segment.end_point.py])
+    return [px, py], state, dist
 
 
 def point2segment(point, segment_point0, segment_point1):
     """
-    :param point: point to be matched, [px(double), py(double)] 
-    :param segment_point0: segment [px, py]
-    :param segment_point1: [px, py]
+    :param point: Point
+    :param segment_point0: 
+    :param segment_point1: 
     :return: dist from point to segment
     """
-    x, y = point[0:2]
-    x0, y0 = segment_point0[0:2]
-    x1, y1 = segment_point1[0:2]
+    x, y = point.x, point.y
+    x0, y0 = segment_point0.x, segment_point0.y
+    x1, y1 = segment_point1.x, segment_point1.y
     cr = (x1 - x0) * (x - x0) + (y1 - y0) * (y - y0)
     if cr <= 0:
         return math.sqrt((x - x0) * (x - x0) + (y - y0) * (y - y0))
@@ -236,73 +246,39 @@ def point2segment(point, segment_point0, segment_point1):
     return math.sqrt((x - px) * (x - px) + (y - py) * (y - py))
 
 
-def draw_raw(traj, ax):
-    xlist, ylist = [], []
-    for point in traj:
-        xlist.append(point.px)
-        ylist.append(point.py)
-    ax.plot(xlist, ylist, marker='o', linestyle='--', color='k', lw=1)
-
-
-def line2grid(segment_point0, segment_point1):
-    x0, y0 = segment_point0[0:2]
-    x1, y1 = segment_point1[0:2]
-
-    dx, dy = x1 - x0, y1 - y0
-    # 是否用x步进
-    if dx == 0:
-        x_step = False
-    else:
-        k = dy / dx
-        x_step = math.fabs(k) < 1
-    grid = []
-    if x_step:
-        if x0 > x1:
-            x0, y0, x1, y1 = x1, y1, x0, y0
-        k = dy / dx
-        x, y = int(x0), y0
-        while x <= x1:
-            grid.append([x, int(y)])
-            # grid.append([x, int(y) + 1])
-            x, y = x + 1, y + k
-    else:
-        if y0 > y1:
-            x0, y0, x1, y1 = x1, y1, x0, y0
-        k = dx / dy
-        x, y = x0, int(y0)
-        while y <= y1:
-            grid.append([int(x), y])
-            # grid.append([int(x), y + 1])
-            x, y = x + k, y + 1
-    return grid
-
-
-def get_parallel(segment_point0, segment_point1, d):
+def point_segment_prob(point, segment):
     """
-    获取离线段距离为d的两条平行线段
-    :param segment_point0: 线段端点0, Point
-    :param segment_point1: 线段端点1, Point
-    :param d: 距离d
-    :return: segment1(Segment), segment2,
+    calculate emit probability of single matching 
+    :param point: Point
+    :param segment: Segment
+    :return: probability, dist from matching point to fact point, matching state, matching point on road
     """
-    x0, y0 = segment_point0.px, segment_point0.py
-    x1, y1 = segment_point1.px, segment_point1.py
-    vec = np.array([x1 - x0, y1 - y0])
-    y = np.linalg.norm(vec)
-    z = vec / y
-    h0 = np.array([z[1], -z[0]])            # 右手边
-    h1 = np.array([-z[1], z[0]])            # 左手边
-    xh0, yh0 = x0 + h0[0] * d, y0 + h0[1] * d
-    xh1, yh1 = x1 + h0[0] * d, y1 + h0[1] * d
-    p0, p1 = Point(xh0, yh0), Point(xh1, yh1)
-    segment0 = Segment(begin_point=p0, end_point=p1, name='')
-    # segment0 = [[xh0, yh0], [xh1, yh1]]
-    xh0, yh0 = x0 + h1[0] * d, y0 + h1[1] * d
-    xh1, yh1 = x1 + h1[0] * d, y1 + h1[1] * d
-    # segment1 = [[xh0, yh0], [xh1, yh1]]
-    p0, p1 = Point(xh0, yh0), Point(xh1, yh1)
-    segment1 = Segment(begin_point=p0, end_point=p1, name='')
-    return segment0, segment1
+    pt = [point.x, point.y]
+    p0 = [segment.begin_point.x, segment.begin_point.y]
+    p1 = [segment.end_point.x, segment.end_point.y]
+    proj, state, dist = point_project(pt, p0, p1)
+    dev = 5
+    omg = -0.5 * math.pow(dist / dev, 2)
+    p = -math.log(math.sqrt(2 * math.pi) * dev) + omg
+    return p, dist, state, proj
+
+
+def route_trans_prob(euclid_dist, route_dist):
+    """
+    calculate trans probability
+    :param euclid_dist: 
+    :param route_dist: 
+    :return: 
+    """
+    beta = 0.5
+    p = math.fabs(euclid_dist - route_dist) * -beta
+    return p
+
+
+def path_forward(src_pt, dst_pt, line, seq):
+    dist0 = calc_point_dist(src_pt, line.point_list[seq])
+    dist1 = calc_point_dist(dst_pt, line.point_list[seq])
+    return dist0 < dist1
 
 
 def get_line_equation(segment_point0, segment_point1):
@@ -345,79 +321,6 @@ def vec_cross(vec0, vec1):
     return vec0.px * vec1.py - vec1.px * vec0.py
 
 
-def is_segment_cross(segment0, segment1):
-    """
-    计算两线段是否相交
-    :param segment0: Segment
-    :param segment1:
-    :return: bool
-    """
-    a, b = segment0.begin_point, segment0.end_point
-    c, d = segment1.begin_point, segment1.end_point
-    ac = Vector(c.px - a.px, c.py - a.py)
-    ad = Vector(d.px - a.px, d.py - a.py)
-    bc = Vector(c.px - b.px, c.py - b.py)
-    bd = Vector(d.px - b.px, d.py - b.py)
-    ca, cb, da, db = -ac, -bc, -ad, -bd
-    c0, c1 = vec_cross(ac, ad), vec_cross(bc, bd)
-    c2, c3 = vec_cross(ca, cb), vec_cross(da, db)
-    w0 = moid(c0) * moid(c1)
-    w1 = moid(c2) * moid(c3)
-
-    return w0 <= 0 and w1 <= 0
-
-
-def cut_y(point_list, y):
-    """
-    截取y以下的线段
-    :param point_list: list[Point] 
-    :param y: thread y
-    :return: new_point_list[Point]
-    """
-    new_point_list = []
-    last_point = None
-    for point in point_list:
-        if point.py < y:
-            new_point_list.append(point)
-        else:
-            cur_seg = Segment(last_point, point)
-            par = Segment(Point(0, y), Point(1, y))
-            _, px, py = get_cross_point(cur_seg, par)
-            new_point_list.append(Point(px, py))
-            break
-        last_point = point
-    return new_point_list
-
-
-def cut_x(point_list, x):
-    """
-    截取x以右的线段
-    :param point_list: list[Point] 
-    :param x: thread x
-    :return: new_point_list[Point]
-    """
-    new_point_list = []
-    last_point = None
-    cut = False
-    for point in point_list:
-        if point.px < x:
-            pass
-        elif not cut:
-            if last_point is None:
-                new_point_list.append(point)
-                cut = True
-            else:
-                cur_seg = Segment(last_point, point)
-                par = Segment(Point(x, 0), Point(x, 1))
-                _, px, py = get_cross_point(cur_seg, par)
-                new_point_list.append(Point(px, py))
-                cut = True
-        else:
-            new_point_list.append(point)
-        last_point = point
-    return new_point_list
-
-
 def get_dist(point0, point1):
     """
     :param point0: Point
@@ -433,42 +336,6 @@ def get_segment_length(segment):
     :return: 
     """
     return get_dist(segment.begin_point, segment.end_point)
-
-
-def cut_from_segment(segment, d):
-    """
-    从segment里面切开距离为d的线段
-    :param segment: Segment
-    :param d: 
-    :return: segment0, segment1
-    """
-    x0, y0 = segment.begin_point.px, segment.begin_point.py
-    x1, y1 = segment.end_point.px, segment.end_point.py
-    vec = np.array([x1 - x0, y1 - y0])
-    y = np.linalg.norm(vec)
-    z0 = vec / y         # 单位向量
-    xd, yd = x0 + z0[0] * d, y0 + z0[1] * d
-    cr = Point(xd, yd)
-    s0 = Segment(segment.begin_point, cr)
-    s1 = Segment(cr, segment.end_point)
-    return s0, s1
-
-
-def get_segment_distance(seg0, seg1):
-    """
-    :param seg0: Segment
-    :param seg1: 
-    :return: 
-    """
-    d00, d01 = point2segment2(seg0.begin_point, seg1), point2segment2(seg0.end_point, seg1)
-    d10, d11 = point2segment2(seg1.begin_point, seg0), point2segment2(seg1.end_point, seg0)
-    return min(min(d00, d01), min(d10, d11))
-
-
-x_pi = 3.14159265358979324 * 3000.0 / 180.0
-pi = 3.1415926535897932384626  # π
-a = 6378245.0  # 长半轴
-ee = 0.00669342162296594323  # 扁率
 
 
 def gcj02_to_bd09(lng, lat):
@@ -518,8 +385,8 @@ def wgs84_to_gcj02(lng, lat):
     magic = math.sin(radlat)
     magic = 1 - ee * magic * magic
     sqrtmagic = math.sqrt(magic)
-    dlat = (dlat * 180.0) / ((a * (1 - ee)) / (magic * sqrtmagic) * pi)
-    dlng = (dlng * 180.0) / (a / sqrtmagic * math.cos(radlat) * pi)
+    dlat = (dlat * 180.0) / ((earth_a * (1 - ee)) / (magic * sqrtmagic) * pi)
+    dlng = (dlng * 180.0) / (earth_a / sqrtmagic * math.cos(radlat) * pi)
     mglat = lat + dlat
     mglng = lng + dlng
     return [mglng, mglat]
@@ -540,8 +407,8 @@ def gcj02_to_wgs84(lng, lat):
     magic = math.sin(radlat)
     magic = 1 - ee * magic * magic
     sqrtmagic = math.sqrt(magic)
-    dlat = (dlat * 180.0) / ((a * (1 - ee)) / (magic * sqrtmagic) * pi)
-    dlng = (dlng * 180.0) / (a / sqrtmagic * math.cos(radlat) * pi)
+    dlat = (dlat * 180.0) / ((earth_a * (1 - ee)) / (magic * sqrtmagic) * pi)
+    dlng = (dlng * 180.0) / (earth_a / sqrtmagic * math.cos(radlat) * pi)
     mglat = lat + dlat
     mglng = lng + dlng
     return [lng * 2 - mglng, lat * 2 - mglat]

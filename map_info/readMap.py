@@ -7,12 +7,26 @@
 
 import sqlite3
 from map_struct import MapPoint, MapSegment, LinkDesc
+from sklearn.neighbors import KDTree
+import numpy as np
+from time import clock
+import random
 
 
 map_uid = {}        # assist for store string id, as map_uid["84354.12,92431.94"] = map_point
 pt_cnt = 0          # global pid, as current counter
 ORT_ONEWAY = 1
 ORT_DBWAY = 0
+
+
+def debug_time(func):
+    def wrapper(*args, **kwargs):
+        bt = clock()
+        a = func(*args, **kwargs)
+        et = clock()
+        print "read map.py", func.__name__, "cost", round(et - bt, 2), "secs"
+        return a
+    return wrapper
 
 
 def insert_map_point(pt, mp_list):
@@ -33,12 +47,13 @@ def insert_map_point(pt, mp_list):
     return pt.pid
 
 
-def read_sqlite():
+def read_sqlite(filename):
     """
     read map, return line list (MapSegment) and point list (MapPoint)
+    :param: filename db path & name
     :return: 
     """
-    conn = sqlite3.connect("hz3.db")
+    conn = sqlite3.connect(filename)
     cur = conn.cursor()
     sql = "select s_id, seq, px, py from tb_seg_point order by s_id, seq"
     cur.execute(sql)
@@ -65,16 +80,20 @@ def read_sqlite():
 
     for line in line_list:
         pt_len = len(line.point_list)
+
         for i, pt in enumerate(line.point_list):
-            ld = LinkDesc(line, i, True)
             if line.ort == ORT_ONEWAY:
-                if i != pt_len - 1:
+                ld = LinkDesc(line, i, True)
+                rld = LinkDesc(line, i, False)
+                if i < pt_len - 1:
                     line.point_list[i].add_link(ld, line.point_list[i + 1])
+                    line.point_list[i + 1].add_rlink(rld, line.point_list[i])
             else:
                 if i >= 1:
-                    rld = LinkDesc(line, i - 1, False)
-                    line.point_list[i].add_link(rld, line.point_list[i - 1])
+                    ld = LinkDesc(line, i - 1, False)
+                    line.point_list[i].add_link(ld, line.point_list[i - 1])
                 if i < pt_len - 1:
+                    ld = LinkDesc(line, i, True)
                     line.point_list[i].add_link(ld, line.point_list[i + 1])
 
     cur.close()
@@ -82,4 +101,34 @@ def read_sqlite():
     return line_list, point_list
 
 
-read_sqlite()
+def make_kdtree(point_list):
+    nd_list, id_list = [], []
+    for i, pt in enumerate(point_list):
+        id_list.append(i)
+        nd_list.append([pt.x, pt.y])
+    X = np.array(nd_list)
+    return KDTree(X, leaf_size=2, metric="euclidean"), X
+
+
+class MapInfo(object):
+    @debug_time
+    def __init__(self, db_name="hz3.db"):
+        self.line_list, self.point_list = read_sqlite(db_name)
+        self.kdt, self.x = make_kdtree(self.point_list)
+
+
+@debug_time
+def query(mi):
+    xy_list = []
+    for i in range(100000):
+        x, y = random.uniform(80000, 100000), random.uniform(80000, 100000)
+        xy_list.append([x, y])
+    idx, dst = mi.kdt.query(xy_list, k=20)
+    flag = 0
+
+
+def t():
+    mi = MapInfo()
+    query(mi)
+
+
