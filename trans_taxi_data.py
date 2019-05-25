@@ -20,7 +20,7 @@ a = 6378245.0
 ee = 0.00669342162296594323
 # World Geodetic System ==> Mars Geodetic System
 
-INTERVAL_CNT = 1000
+INTERVAL_CNT = 10000
 conn_redis = None
 
 
@@ -108,8 +108,8 @@ class My905Listener(stomp.ConnectionListener):
             except UnicodeDecodeError:
                 # print msg_dict
                 return
-            global conn_redis
-            conn_redis.set(name=msg_key, value=msg_json, ex=600)
+            # global conn_redis
+            # conn_redis.set(name=msg_key, value=msg_json, ex=600)
             self.cnt += 1
             if self.cnt % INTERVAL_CNT == 0:
                 self.on_cnt(time.clock() - self.ticker)
@@ -120,7 +120,7 @@ class My905Listener(stomp.ConnectionListener):
 
     def on_disconnected(self):
         print self.gateway, "disconnected"
-        # connect_and_subscribe(self.gateway)
+        connect_and_subscribe(self.gateway)
 
 
 def connect_and_subscribe(gateway):
