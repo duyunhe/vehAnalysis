@@ -7,15 +7,16 @@
 from time import clock
 from geo import point2segment, point_segment_prob, calc_include_angle3, calc_point_dist, \
     route_trans_prob, path_forward
-from map_struct import Segment
+from map_struct import Segment, SpeedLine
 from map_info.readMap import ORT_DBWAY
 import Queue
+from collections import defaultdict
 
 
 MAX_OFFSET = 60
 
 
-class Candidate(object):
+class Candidate:
     def __init__(self, line, seq):
         self.line, self.seq = line, seq
         self.uid = self.line.lid * 100 + seq
@@ -27,7 +28,7 @@ class Candidate(object):
         return self.uid == other.uid
 
 
-class MatchPoint(object):
+class MatchPoint:
     def __init__(self, x, y, line, seq, ort, prob, dist, state):
         self.x, self.y = x, y   # projection point
         self.line, self.seq, self.ort = line, seq, ort
@@ -39,7 +40,7 @@ class MatchPoint(object):
         self.best_last_idx = None
 
 
-class TransInfo(object):
+class TransInfo:
     def __init__(self, cur_idx, last_idx, route_dist, prob):
         self.cur_idx, self.last_idx = cur_idx, last_idx     # index in match records
         self.route_dist = route_dist        # route from last point to current point
@@ -48,7 +49,7 @@ class TransInfo(object):
         self.pt_path = []
 
 
-class MatchRecord(object):
+class MatchRecord:
     """
     each point has one MatchRecord, contains of MatchPoints, TransInfo to last point
     """
@@ -66,12 +67,12 @@ class MatchRecord(object):
         self.trans_list.append(ti)
 
 
-class LinePath(object):
-    def __init__(self, dist, line, ort):
-        self.dist, self.line, self.ort = dist, line, ort
+class LinePath:
+    def __init__(self, dist, line, forward):
+        self.dist, self.line, self.forward = dist, line, forward
 
 
-class PrevState(object):
+class PrevState:
     """
     take line and direction for path
     """
@@ -79,7 +80,7 @@ class PrevState(object):
         self.line, self.point, self.ort = line, point, ort
 
 
-class SearchNode(object):
+class SearchNode:
     def __init__(self, point, priority):
         self.priority = priority
         self.point = point
@@ -88,7 +89,7 @@ class SearchNode(object):
         return self.priority < other.priority
 
 
-class DistConfig(object):
+class DistConfig:
     def __init__(self, euclid_dist, dist_thread, min_dist_thread):
         self.euclid_dist, self.dist_thread, self.min_dist_thread = euclid_dist, dist_thread, min_dist_thread
 
@@ -123,9 +124,10 @@ def match_trace(trace, map_info):
             match_latter(map_index, trace, i, trace_match, ramp)
         # 4. global prob. dynamic programming -- as hidden markov model
         match_best(trace_match, i)
-    # 5. find path
+    # find path
     global_match(trace_match)
-    over = True
+    # road & speed
+    get_road_speed(trace, trace_match)
 
 
 def check_line_projection(line_dist, gps_point, line_desc):
@@ -490,3 +492,37 @@ def global_match(match_records):
             if ti.cur_idx == rec.best_idx and ti.last_idx == best_idx and ti.route_dist < min_path:
                 rec.best_trans, min_path = ti, ti.route_dist
 
+
+def get_road_speed(trace, match_records):
+    """
+
+    :param trace:
+    :param match_records:
+    :return:
+    """
+    temp_speed = defaultdict(list)
+    # for speed calculation, { line: [[speed0, dist0], [speed1, dist1]] }
+    # line has one lid and one attribute if it is forward
+    # then for each line, calculate weighted average speed
+    for i, rec in enumerate(match_records):
+        if i > 0 and rec.best_trans is not None:
+            last_data, cur_data = trace[i - 1: i + 1]
+            itv = cur_data - last_data
+            trans = rec.best_trans
+            spd = trans.route_dist / itv * 3.6
+            for lp in trans.line_path:
+                line, dist, forward = lp.line, lp.dist, lp.forward
+                ln = SpeedLine(line.lid, forward)
+                temp_speed[ln].append([spd, dist])
+
+    road_speed = {}
+    for ln, spd_list in temp_speed.iteritems():
+        total, w = 0, 0
+        for spd, dist in spd_list:
+            total, w = total + spd * dist, dist
+        if w == 0:
+            speed = 0
+        else:
+            speed = total / w
+        road_speed[ln] = speed
+    return road_speed

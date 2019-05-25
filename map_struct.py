@@ -5,7 +5,7 @@
 # @File    : map_struct.py
 
 
-class Segment(object):
+class Segment:
     def __init__(self, begin_pt, end_pt):
         """
         :param begin_pt: Point
@@ -20,7 +20,7 @@ class Point(object):
         self.pid = None
 
 
-class LinkDesc(object):
+class LinkDesc:
     def __init__(self, line, seq, ort):
         self.line, self.seq, self.ort = line, seq, ort
 
@@ -63,7 +63,7 @@ class MapPoint(Point):
         return self.pid == other.pid
 
 
-class MapSegment(object):
+class MapSegment:
     def __init__(self, lid):
         self.point_list = []
         self.name, self.rank, self.ort = None, None, None
@@ -73,4 +73,13 @@ class MapSegment(object):
         self.point_list.append(map_point)
 
 
+class SpeedLine:
+    def __init__(self, lid, fwd):
+        self.lid, self.fwd = lid, fwd
+        self.uid = lid * 2 + int(fwd)
 
+    def __hash__(self):
+        return self.uid
+
+    def __eq__(self, other):
+        return self.uid == other.uid
