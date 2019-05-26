@@ -168,6 +168,8 @@ def check_network():
 if __name__ == '__main__':
     logging.basicConfig(filename='mq_test.txt', format="%(asctime)s %(message)s", level=logging.WARNING)
     conn_redis = redis.Redis(host="192.168.11.229", port=6300, db=1)
+    for g in ['ty', 'ft', 'hq']:
+        conn_mq[g] = None
     connect_mq()
     while True:
         time.sleep(30)
