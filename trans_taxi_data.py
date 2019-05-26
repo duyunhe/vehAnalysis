@@ -22,6 +22,7 @@ ee = 0.00669342162296594323
 
 INTERVAL_CNT = 10000
 conn_redis = None
+conn_mq = {}
 
 
 def isu2str(msg):
@@ -120,12 +121,19 @@ class My905Listener(stomp.ConnectionListener):
 
     def on_disconnected(self):
         print self.gateway, "disconnected"
-        connect_and_subscribe(self.gateway)
+        connect_mq()
 
 
 def connect_and_subscribe(gateway):
+    global conn_mq
     print 'ActiveMQ connecting...'
     try:
+        c = conn_mq[gateway]
+        if c is not None:
+            try:
+                c.stop()
+            except Exception as e:
+                print e, 'can not stop'
         listener = My905Listener(gateway)
         c = stomp.Connection10([('192.168.0.102', 61615)])
         c.set_listener('', listener)
@@ -142,6 +150,7 @@ def connect_and_subscribe(gateway):
 
 
 def connect_mq():
+    global conn_mq
     gateways = ['ty', 'ft', 'hq']
     for g in gateways:
         connect_and_subscribe(g)
