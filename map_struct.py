@@ -83,3 +83,9 @@ class SpeedLine:
 
     def __eq__(self, other):
         return self.uid == other.uid
+
+    def __lt__(self, other):
+        return self.uid < other.uid
+
+    def __str__(self):
+        return "{0},{1}".format(self.lid, self.fwd)

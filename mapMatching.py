@@ -10,8 +10,6 @@ from geo import point2segment, point_segment_prob, calc_include_angle3, calc_poi
 from map_struct import Segment, SpeedLine
 from map_info.readMap import ORT_DBWAY
 import Queue
-from collections import defaultdict
-
 
 MAX_OFFSET = 60
 
@@ -104,13 +102,14 @@ def debug_time(func):
     return wrapper
 
 
-@debug_time
-def match_trace(trace, map_info):
+def match_trace(trace, map_info, temp_speed):
     """
     :param trace: TaxiData
     :param map_info: MapInfo
+    :param temp_speed: Dict { LineSpeed: [[speed, dist], ...]
     :return: 
     """
+    # for multiprocessor use
     if len(trace) == 0:
         return
     trace_match = []        # MatchRecord
@@ -127,7 +126,7 @@ def match_trace(trace, map_info):
     # find path
     global_match(trace_match)
     # road & speed
-    get_road_speed(trace, trace_match)
+    get_road_speed(trace, trace_match, temp_speed)
 
 
 def check_line_projection(line_dist, gps_point, line_desc):
@@ -493,14 +492,13 @@ def global_match(match_records):
                 rec.best_trans, min_path = ti, ti.route_dist
 
 
-def get_road_speed(trace, match_records):
+def get_road_speed(trace, match_records, temp_speed):
     """
-
     :param trace:
     :param match_records:
-    :return:
+    :param temp_speed:
+    :return: 
     """
-    temp_speed = defaultdict(list)
     # for speed calculation, { line: [[speed0, dist0], [speed1, dist1]] }
     # line has one lid and one attribute if it is forward
     # then for each line, calculate weighted average speed
@@ -509,20 +507,40 @@ def get_road_speed(trace, match_records):
             last_data, cur_data = trace[i - 1: i + 1]
             itv = cur_data - last_data
             trans = rec.best_trans
+            if itv == 0:
+                continue
             spd = trans.route_dist / itv * 3.6
             for lp in trans.line_path:
                 line, dist, forward = lp.line, lp.dist, lp.forward
                 ln = SpeedLine(line.lid, forward)
-                temp_speed[ln].append([spd, dist])
+                # gps may cross over too much distance and because of time error, interval time is still 20 sec.
+                # filter it
+                if dist > 0 and spd < 120:
+                    try:
+                        temp_speed[ln].append([spd, dist])
+                    except KeyError:
+                        temp_speed[ln] = [[spd, dist]]
+    # every vehicle has contribute several speeds for roads,
+    # static should be overall, calculated later
 
+
+def static_road_speed(temp_speed):
+    """
+    :param temp_speed: 
+    :return: road_speed : Dict { LineSpeed: speed }
+    """
     road_speed = {}
     for ln, spd_list in temp_speed.iteritems():
         total, w = 0, 0
-        for spd, dist in spd_list:
-            total, w = total + spd * dist, dist
+        for item in spd_list:
+            spd, dist = item[:]
+            total, w = spd * dist + total, dist + w
         if w == 0:
-            speed = 0
+            continue
         else:
-            speed = total / w
-        road_speed[ln] = speed
+            road_speed[ln] = total / w
+    # keys = temp_speed.keys()
+    # keys.sort()
+    # for key in keys:
+    #     print key, road_speed[key]
     return road_speed

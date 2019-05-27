@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 # @Time    : 2019/5/16 17:55
 # @Author  : yhdu@tongwoo.cn
-# @简介    : 获取taxi数据源,ETL成json并转发至redis
-# @File    : trans_taxi_data.py
+# @简介    : 从activemq获取taxi数据源,ETL成json并转发至redis
+# @File    : mq2Redis.py
 
 import stomp
 import time
@@ -13,12 +13,9 @@ import json
 import struct
 import redis
 from datetime import datetime
-from geo import bl2xy, in_hz, gcj02_to_wgs84
+from geo import in_hz, gcj02_to_wgs84
+from coord import bl2xy
 
-# 84 to 02
-a = 6378245.0
-ee = 0.00669342162296594323
-# World Geodetic System ==> Mars Geodetic System
 
 INTERVAL_CNT = 10000
 conn_redis = None

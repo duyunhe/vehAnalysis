@@ -7,9 +7,13 @@
 
 import cx_Oracle
 from datetime import timedelta, datetime
-from geo import bl2xy, calc_dist
+from coord import bl2xy
+from geo import calc_dist
 from time import clock
+import json
 import os
+import redis
+from taxiStruct import TaxiData
 os.environ['NLS_LANG'] = 'SIMPLIFIED CHINESE_CHINA.UTF8'
 
 
@@ -23,24 +27,19 @@ def debug_time(func):
     return wrapper
 
 
-class TaxiData:
-    def __init__(self, veh, px, py, stime, state, speed, car_state, direction):
-        self.veh = veh
-        self.x, self.y, self.stime, self.state, self.speed = px, py, stime, state, speed
-        self.car_state, self.direction = car_state, direction
-
-    def __sub__(self, other):
-        return (self.stime - other.stime).total_seconds()
-
-
 @debug_time
-def get_gps_data():
-    begin_time = datetime(2018, 5, 21, 4, 0, 0)
+def get_gps_data(all_data=False):
+    begin_time = datetime(2018, 5, 21, 16, 0, 0)
     conn = cx_Oracle.connect('hz/hz@192.168.11.88:1521/orcl')
-    end_time = begin_time + timedelta(minutes=60)
-    sql = "select px, py, speed_time, state, speed, carstate, direction, vehicle_num from " \
+    end_time = begin_time + timedelta(minutes=5)
+    if all_data:
+        sql = "select px, py, speed_time, state, speed, carstate, direction, vehicle_num from " \
+              "TB_GPS_1805 t where speed_time >= :1 " \
+              "and speed_time < :2 and state = 1 order by speed_time "
+    else:
+        sql = "select px, py, speed_time, state, speed, carstate, direction, vehicle_num from " \
           "TB_GPS_1805 t where speed_time >= :1 " \
-          "and speed_time < :2 and vehicle_num = '浙AT4799' and state = 1 order by speed_time "
+          "and speed_time < :2 and vehicle_num = '浙ATE165' and state = 1 order by speed_time "
 
     tup = (begin_time, end_time)
     cursor = conn.cursor()
@@ -86,4 +85,33 @@ def get_gps_data():
     cursor.close()
     conn.close()
     return new_dict
+
+
+@debug_time
+def trans2redis(trace_dict):
+    conn = redis.Redis(host="192.168.11.229", port=6300, db=0)
+    conn.flushdb()
+    idx = 0
+    for veh, trace in trace_dict.iteritems():
+        msg = {}
+        for data in trace:
+            x, y, spd, speed_time, pos, load, ort = data.x, data.y, data.speed, \
+                                                    data.stime, data.car_state, data.state, data.direction
+            speed_time = speed_time.strftime("%Y-%m-%d %H:%M:%S")
+            msg_dict = {'isu': veh, 'x': x, 'y': y, 'speed': spd, 'speed_time': speed_time, 'pos': pos, 'load': load,
+                        'ort': ort}
+            msg_json = json.dumps(msg_dict)
+            msg_key = "{0}".format(idx)
+            idx += 1
+            msg[msg_key] = msg_json
+        conn.mset(msg)
+
+
+def main():
+    trace_dict = get_gps_data(True)
+    trans2redis(trace_dict)
+
+
+main()
+
 

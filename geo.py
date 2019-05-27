@@ -1,52 +1,14 @@
 # coding=utf-8
 import math
-from ctypes import *
+
 import numpy as np
 from map_struct import Point
 
-dll = WinDLL("E:/job/amap2local/dll/CoordTransDLL.dll")
+
 x_pi = 3.14159265358979324 * 3000.0 / 180.0
 pi = 3.1415926535897932384626  # π
 earth_a = 6378245.0  # 长半轴
 ee = 0.00669342162296594323  # 扁率
-
-
-class BLH(Structure):
-    _fields_ = [("b", c_double),
-                ("l", c_double),
-                ("h", c_double)]
-
-
-class XYZ(Structure):
-    _fields_ = [("x", c_double),
-                ("y", c_double),
-                ("z", c_double)]
-
-
-def bl2xy(b, l):
-    """
-    :param b: latitude
-    :param l: longitude
-    :return: x, y
-    """
-    blh = BLH()
-    blh.b = float(b)
-    blh.l = float(l)
-    blh.h = 0
-    xyz = XYZ()
-    global dll
-    dll.WGS84_BLH_2_HZ_xyH(blh, byref(xyz))
-    y, x = xyz.x, xyz.y
-    return x, y
-
-
-def xy2bl(x, y):
-    xyz = XYZ()
-    blh = BLH()
-    xyz.x, xyz.y, xyz.z = y, x, 0
-    global dll
-    dll.HZ_xyH_2_WGS84_BLH(xyz, byref(blh))
-    return blh.b, blh.l
 
 
 def calc_point_dist(pt0, pt1):
