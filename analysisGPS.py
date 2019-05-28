@@ -5,7 +5,7 @@
 # @File    : analysisGPS.py
 
 
-from fetchRedis import get_gps_data
+from fetchRedis import get_gps_data, get_gps_list
 from mapMatching import match_trace, static_road_speed
 from collections import defaultdict
 from time import clock
@@ -34,13 +34,6 @@ def main():
     print len(road_speed)
 
 
-def get_gps_list(trace_dict):
-    trace_list = []
-    for veh, trace in trace_dict.iteritems():
-        trace_list.append(trace)
-    return trace_list
-
-
 def match_process(trace_list, temp_speed):
     mi = MapInfo("./map_info/hz3.db")
     for trace in trace_list:
@@ -51,6 +44,7 @@ def match_process(trace_list, temp_speed):
 def multi_main():
     trace_dict = get_gps_data()
     trace_list = get_gps_list(trace_dict)
+    print len(trace_list)
 
     manager = multiprocessing.Manager()
     temp_speed = manager.dict()

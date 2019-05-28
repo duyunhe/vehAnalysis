@@ -107,11 +107,24 @@ def trans2redis(trace_dict):
         conn.mset(msg)
 
 
+def redis2redis():
+    conn = redis.Redis(host="192.168.11.229", port=6300, db=1)
+    conn2 = redis.Redis(host="192.168.11.229", port=6300, db=2)
+    conn2.flushdb()
+    keys = conn.keys()
+    res = conn.mget(keys)
+    with conn2.pipeline() as p:
+        for i, key in enumerate(keys):
+            if res[i] is not None:
+                p.set(key, res[i])
+        p.execute()
+
+
 def main():
     trace_dict = get_gps_data(False)
     trans2redis(trace_dict)
 
 
-main()
+redis2redis()
 
 

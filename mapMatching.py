@@ -530,7 +530,7 @@ def static_road_speed(temp_speed):
     :return: road_speed : Dict { LineSpeed: speed }
     """
     road_speed = {}
-    for ln, spd_list in temp_speed.iteritems():
+    for ln, spd_list in temp_speed.items():
         total, w = 0, 0
         for item in spd_list:
             spd, dist = item[:]
