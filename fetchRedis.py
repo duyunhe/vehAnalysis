@@ -24,7 +24,7 @@ def debug_time(func):
 
 @debug_time
 def get_gps_data():
-    conn = redis.Redis(host="192.168.11.229", port=6300, db=1)
+    conn = redis.Redis(host="192.168.11.229", port=6300, db=2)
     keys = conn.keys()
     new_trace = {}
     if len(keys) != 0:
@@ -59,3 +59,25 @@ def get_gps_data():
             new_trace[veh] = trace
 
     return new_trace
+
+
+def get_gps_list(trace_dict):
+    """
+    filter original data
+    :param trace_dict: 
+    :return: 
+    """
+    trace_list = []
+    for veh, trace in trace_dict.iteritems():
+        last_data = None
+        flag = False
+        for data in trace:
+            if last_data is not None:
+                itv = data - last_data
+                if itv > 180:
+                    flag = True
+            last_data = data
+        if not flag:
+            trace_list.append(trace)
+    return trace_list
+
