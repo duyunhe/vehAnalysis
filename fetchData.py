@@ -108,7 +108,7 @@ def trans2redis(trace_dict):
 
 
 def main():
-    trace_dict = get_gps_data(True)
+    trace_dict = get_gps_data(False)
     trans2redis(trace_dict)
 
 

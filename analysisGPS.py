@@ -4,7 +4,7 @@
 # @简介    : 主程序集成，获取道路信息、GPS数据，统计计算并返回速度
 # @File    : analysisGPS.py
 
-# from fetchData import get_gps_data
+
 from fetchRedis import get_gps_data
 from mapMatching import match_trace, static_road_speed
 from collections import defaultdict
@@ -55,16 +55,17 @@ def multi_main():
     manager = multiprocessing.Manager()
     temp_speed = manager.dict()
     pc_list = []
-    for i in range(4):
-        p = multiprocessing.Process(target=match_process, args=(trace_list[i::4], temp_speed))
+    thread_num = 2
+    for i in range(thread_num):
+        p = multiprocessing.Process(target=match_process, args=(trace_list[i::thread_num], temp_speed))
         p.daemon = True
         pc_list.append(p)
     for p in pc_list:
         p.start()
     for p in pc_list:
         p.join()
-    # road_speed = static_road_speed(temp_speed)
-    # print len(road_speed)
+    road_speed = static_road_speed(temp_speed)
+    print len(road_speed)
 
 
 if __name__ == '__main__':

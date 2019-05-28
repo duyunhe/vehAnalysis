@@ -91,6 +91,8 @@ class My905Listener(stomp.ConnectionListener):
         str_isu = isu2str(isu)
         alarm, state, lat, lng, spd, ort = struct.unpack("!IIIIHB", body)
         pos, load = get_car_state(state)
+        if load == 0:
+            return
         # print lat, lng, spd
         wglat, wglng = float(lat) / 600000, float(lng) / 600000
         if in_hz(wglat, wglng):
@@ -106,8 +108,8 @@ class My905Listener(stomp.ConnectionListener):
             except UnicodeDecodeError:
                 # print msg_dict
                 return
-            # global conn_redis
-            # conn_redis.set(name=msg_key, value=msg_json, ex=600)
+            global conn_redis
+            conn_redis.set(name=msg_key, value=msg_json, ex=600)
             self.cnt += 1
             if self.cnt % INTERVAL_CNT == 0:
                 self.on_cnt(time.clock() - self.ticker)

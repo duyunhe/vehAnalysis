@@ -6,7 +6,7 @@
 
 from ctypes import *
 
-dll = WinDLL("E:/job/amap2local/dll/CoordTransDLL.dll")
+dll = WinDLL("CoordTransDLL.dll")
 
 
 class BLH(Structure):

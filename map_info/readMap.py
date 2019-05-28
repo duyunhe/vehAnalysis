@@ -111,7 +111,6 @@ def make_kdtree(point_list):
 
 
 class MapInfo(object):
-    @debug_time
     def __init__(self, db_name="hz3.db"):
         self.line_list, self.point_list = read_sqlite(db_name)
         self.kdt, self.x = make_kdtree(self.point_list)

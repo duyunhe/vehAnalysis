@@ -24,7 +24,7 @@ def debug_time(func):
 
 @debug_time
 def get_gps_data():
-    conn = redis.Redis(host="192.168.11.229", port=6300, db=0)
+    conn = redis.Redis(host="192.168.11.229", port=6300, db=1)
     keys = conn.keys()
     new_trace = {}
     if len(keys) != 0:
