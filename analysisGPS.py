@@ -28,8 +28,11 @@ def main():
     trace_dict = get_gps_data()
     temp_speed = defaultdict(list)
     mi = MapInfo("./map_info/hz3.db")
+    i = 0
     for veh, trace in trace_dict.iteritems():
         match_trace(trace, mi, temp_speed)
+        i += 1
+        break
     road_speed = static_road_speed(temp_speed)
     print len(road_speed)
 

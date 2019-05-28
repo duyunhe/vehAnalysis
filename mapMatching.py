@@ -97,7 +97,7 @@ def debug_time(func):
         bt = clock()
         a = func(*args, **kwargs)
         et = clock()
-        print "mm.py", func.__name__, "cost", round(et - bt, 2), "secs"
+        print "mm.py", func.__name__, "cost", round(et - bt, 4), "secs"
         return a
     return wrapper
 
@@ -144,6 +144,7 @@ def check_line_projection(line_dist, gps_point, line_desc):
         line_dist[lid] = [seq, dist]
 
 
+@debug_time
 def get_candidate(gps_point, map_info):
     """
     first step, find the nearest candidate edges
@@ -152,7 +153,7 @@ def get_candidate(gps_point, map_info):
     :return: 
     """
     xy_list = [[gps_point.x, gps_point.y]]
-    idx, dst = map_info.kdt.query_radius(xy_list, r=500, return_distance=True)
+    idx, dst = map_info.kdt.query_radius(xy_list, r=200, return_distance=True)
     point_list, line_list = map_info.point_list, map_info.line_list
     line_dist = {}      # make sure that each line has only one matching point
     # { lid: [seq, dist] }
@@ -172,6 +173,7 @@ def get_candidate(gps_point, map_info):
     return match_set
 
 
+@debug_time
 def match_single(candidate_set, trace, idx, match_records):
     """
     :param candidate_set: from get_candidate
@@ -404,6 +406,7 @@ def get_trans_matrix(map_index, last_match_point, match_record, trace, trace_idx
     search_node(frontier, map_index, match_record, dist_config, last_match_point, cur_point, min_dist, come_from, ramp)
 
 
+@debug_time
 def match_latter(map_index, trace, trace_idx, match_records, ramp):
     """
     :param map_index: { lid: MatchPoint }
@@ -428,6 +431,7 @@ def match_latter(map_index, trace, trace_idx, match_records, ramp):
         get_trans_matrix(map_index, last_mp, cur_rec, trace, trace_idx, ramp)
 
 
+@debug_time
 def match_best(match_records, idx):
     """
     probability DP: step 1, find the maximum with each joint node 

@@ -10,6 +10,7 @@ import json
 from datetime import datetime
 from taxiStruct import TaxiData, cmp_gps
 from time import clock
+from geo import calc_dist
 
 
 def debug_time(func):
@@ -39,8 +40,10 @@ def get_gps_data():
                 speed = js_data['speed']
                 stime = datetime.strptime(str_time, "%Y-%m-%d %H:%M:%S")
                 state = 1
-                car_state = 0
+                car_state = js_data['pos']
                 ort = js_data['ort']
+                if car_state == 1:
+                    continue
 
                 taxi_data = TaxiData(veh, px, py, stime, state, speed, car_state, ort)
                 try:
@@ -69,15 +72,29 @@ def get_gps_list(trace_dict):
     """
     trace_list = []
     for veh, trace in trace_dict.iteritems():
+        new_trace = []
+        last_data = None
+        for data in trace:
+            esti = True
+            if last_data is not None:
+                dist = calc_dist([data.x, data.y], [last_data.x, last_data.y])
+                # 过滤异常
+                if data.car_state == 1:  # 非精确
+                    esti = False
+                elif dist < 10:  # GPS的误差在10米，不准确
+                    esti = False
+            last_data = data
+            if esti:
+                new_trace.append(data)
         last_data = None
         flag = False
-        for data in trace:
+        for data in new_trace:
             if last_data is not None:
                 itv = data - last_data
                 if itv > 180:
                     flag = True
             last_data = data
         if not flag:
-            trace_list.append(trace)
+            trace_list.append(new_trace)
     return trace_list
 
