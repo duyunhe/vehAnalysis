@@ -97,4 +97,3 @@ def get_gps_list(trace_dict):
         if not flag:
             trace_list.append(new_trace)
     return trace_list
-

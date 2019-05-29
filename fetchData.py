@@ -31,7 +31,7 @@ def debug_time(func):
 def get_gps_data(all_data=False):
     begin_time = datetime(2018, 5, 21, 16, 0, 0)
     conn = cx_Oracle.connect('hz/hz@192.168.11.88:1521/orcl')
-    end_time = begin_time + timedelta(minutes=5)
+    end_time = begin_time + timedelta(minutes=60)
     if all_data:
         sql = "select px, py, speed_time, state, speed, carstate, direction, vehicle_num from " \
               "TB_GPS_1805 t where speed_time >= :1 " \
@@ -39,7 +39,7 @@ def get_gps_data(all_data=False):
     else:
         sql = "select px, py, speed_time, state, speed, carstate, direction, vehicle_num from " \
           "TB_GPS_1805 t where speed_time >= :1 " \
-          "and speed_time < :2 and vehicle_num = '浙ATE165' and state = 1 order by speed_time "
+          "and speed_time < :2 and vehicle_num = '浙AT2081' and state = 1 order by speed_time "
 
     tup = (begin_time, end_time)
     cursor = conn.cursor()
@@ -125,6 +125,43 @@ def main():
     trans2redis(trace_dict)
 
 
-redis2redis()
+def get_his_list(trace_dict):
+    """
+    :param trace_dict: 
+    :return: 
+    """
+    trace_list = []
+    for veh, trace in trace_dict.iteritems():
+        new_trace = []
+        last_data = None
+        for data in trace:
+            esti = True
+            if last_data is not None:
+                dist = calc_dist([data.x, data.y], [last_data.x, last_data.y])
+                # print data - last_data
+                # 过滤异常
+                if data.car_state == 1:  # 非精确
+                    esti = False
+                elif dist < 10:  # GPS的误差在10米，不准确
+                    esti = False
+            last_data = data
+            if esti:
+                new_trace.append(data)
+        last_data = None
+        x_trace = []
+        for data in new_trace:
+            if last_data is not None:
+                itv = data - last_data
+                if itv > 180:
+                    if len(x_trace) > 1:
+                        trace_list.append(x_trace)
+                    x_trace = [data]
+                else:
+                    x_trace.append(data)
+            last_data = data
+        if len(x_trace) > 1:
+            trace_list.append(x_trace)
+
+    return trace_list
 
 

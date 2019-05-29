@@ -102,7 +102,7 @@ def debug_time(func):
     return wrapper
 
 
-@debug_time
+# @debug_time
 def match_trace(trace, map_info, temp_speed):
     """
     :param trace: TaxiData
@@ -114,9 +114,11 @@ def match_trace(trace, map_info, temp_speed):
     if len(trace) == 0:
         return
     trace_match = []        # MatchRecord
+    idx = pre_candidate(trace, map_info)
+    # k0(trace, map_info)
     for i, gps_data in enumerate(trace):
         # 1. find all possibility
-        candidate = get_candidate(gps_data, map_info)
+        candidate = get_candidate(gps_data, map_info, idx[i])
         # 2. calculate emit prob.
         ramp, map_index = match_single(candidate, trace, i, trace_match)
         # 3. calculate trans prob.
@@ -128,6 +130,14 @@ def match_trace(trace, map_info, temp_speed):
     global_match(trace_match)
     # road & speed
     get_road_speed(trace, trace_match, temp_speed)
+
+
+def pre_candidate(trace, map_info):
+    xy_list = []
+    for data in trace:
+        xy_list.append([data.x, data.y])
+    idx, dst = map_info.kdt.query_radius(xy_list, r=300, return_distance=True)
+    return idx
 
 
 def check_line_projection(line_dist, gps_point, line_desc):
@@ -145,19 +155,18 @@ def check_line_projection(line_dist, gps_point, line_desc):
         line_dist[lid] = [seq, dist]
 
 
-def get_candidate(gps_point, map_info):
+def get_candidate(gps_point, map_info, idx_list):
     """
     first step, find the nearest candidate edges
     :param gps_point: Point 
-    :param map_info: 
+    :param map_info:
+    :param idx_list: 
     :return: 
     """
-    xy_list = [[gps_point.x, gps_point.y]]
-    idx, dst = map_info.kdt.query_radius(xy_list, r=200, return_distance=True)
     point_list, line_list = map_info.point_list, map_info.line_list
     line_dist = {}      # make sure that each line has only one matching point
     # { lid: [seq, dist] }
-    for i in idx[0]:
+    for i in idx_list:
         pt = point_list[i]
         for ld, mp in pt.link_list:
             check_line_projection(line_dist, gps_point, ld)
@@ -251,7 +260,12 @@ def init_search_param(trace, trace_idx, last_match_point, ramp):
     cur_point = trace[trace_idx]
     euclid_dist = calc_point_dist(last_match_point, cur_point)
     min_dist_thread = 1.5 * euclid_dist
-    dist_thread = 6 * euclid_dist if ramp else 3 * euclid_dist
+    dist_thread = 6.0 * euclid_dist if ramp else 3.0 * euclid_dist
+    itv = trace[trace_idx] - trace[trace_idx - 1]
+    spd0, spd1 = trace[trace_idx].speed, trace[trace_idx - 1].speed
+    ave_spd = max(60, max(spd0, spd1)) * 1.2
+    max_driven_dist = itv * ave_spd / 3.6
+    dist_thread, min_dist_thread = min(dist_thread, max_driven_dist), min(min_dist_thread, max_driven_dist)
     min_dist = {}
     come_from = {}
     frontier = Queue.PriorityQueue()  # SearchNode
@@ -405,6 +419,7 @@ def get_trans_matrix(map_index, last_match_point, match_record, trace, trace_idx
     search_node(frontier, map_index, match_record, dist_config, last_match_point, cur_point, min_dist, come_from, ramp)
 
 
+# @debug_time
 def match_latter(map_index, trace, trace_idx, match_records, ramp):
     """
     :param map_index: { lid: MatchPoint }
@@ -545,3 +560,9 @@ def static_road_speed(temp_speed):
     # for key in keys:
     #     print key, road_speed[key]
     return road_speed
+
+
+def k0(trace, map_info):
+    for data in trace:
+        xy_list = [[data.x, data.y]]
+        idx, dst = map_info.kdt.query_radius(xy_list, r=300, return_distance=True)
