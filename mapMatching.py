@@ -8,10 +8,10 @@ from time import clock
 from geo import point2segment, point_segment_prob, calc_include_angle3, calc_point_dist, \
     route_trans_prob, path_forward
 from map_struct import Segment, SpeedLine
-from map_info.readMap import ORT_DBWAY
+from map_info.readMap import ORT_DBWAY, ORT_ONEWAY
 import Queue
 
-MAX_OFFSET = 60
+MAX_OFFSET = 80
 
 
 class Candidate:
@@ -102,7 +102,7 @@ def debug_time(func):
     return wrapper
 
 
-@debug_time
+# @debug_time
 def match_trace(trace, map_info, temp_speed):
     """
     :param trace: TaxiData
@@ -153,7 +153,8 @@ def get_candidate(gps_point, map_info):
     :return: 
     """
     xy_list = [[gps_point.x, gps_point.y]]
-    idx, dst = map_info.kdt.query_radius(xy_list, r=200, return_distance=True)
+    idx, dst = map_info.kdt.query_radius(xy_list, r=300, return_distance=True)
+    # print idx[0]
     point_list, line_list = map_info.point_list, map_info.line_list
     line_dist = {}      # make sure that each line has only one matching point
     # { lid: [seq, dist] }
@@ -252,6 +253,7 @@ def init_search_param(trace, trace_idx, last_match_point, ramp):
     euclid_dist = calc_point_dist(last_match_point, cur_point)
     min_dist_thread = 1.5 * euclid_dist
     dist_thread = 6 * euclid_dist if ramp else 3 * euclid_dist
+    # print dist_thread
     min_dist = {}
     come_from = {}
     frontier = Queue.PriorityQueue()  # SearchNode
@@ -433,7 +435,7 @@ def match_best(match_records, idx):
     """
     probability DP: step 1, find the maximum with each joint node 
     :param match_records: 
-    :param idx: 
+    :param idx: trace_idx
     :return: 
     """
     cur_rec = match_records[idx]
@@ -511,6 +513,7 @@ def get_road_speed(trace, match_records, temp_speed):
             if itv == 0:
                 continue
             spd = trans.route_dist / itv * 3.6
+
             for lp in trans.line_path:
                 line, dist, forward = lp.line, lp.dist, lp.forward
                 ln = SpeedLine(line.lid, forward)
@@ -525,13 +528,20 @@ def get_road_speed(trace, match_records, temp_speed):
     # static should be overall, calculated later
 
 
-def static_road_speed(temp_speed):
+def static_road_speed(map_info, temp_speed):
     """
+    :param map_info
     :param temp_speed: 
     :return: road_speed : Dict { LineSpeed: speed }
     """
     road_speed = {}
+    speed_cnt = 0
     for ln, spd_list in temp_speed.items():
+        x = map_info.line_list[ln.lid].ort == ORT_ONEWAY
+        y = not ln.fwd
+        if x and y:
+            continue
+        speed_cnt += len(spd_list)
         total, w = 0, 0
         for item in spd_list:
             spd, dist = item[:]
@@ -544,4 +554,4 @@ def static_road_speed(temp_speed):
     # keys.sort()
     # for key in keys:
     #     print key, road_speed[key]
-    return road_speed
+    return road_speed, speed_cnt

@@ -6,7 +6,8 @@
 
 
 from fetchRedis import get_gps_data, get_gps_list
-from mapMatching0 import match_trace, static_road_speed
+import mapMatching
+import mapMatching0
 from collections import defaultdict
 from time import clock
 from map_info.readMap import MapInfo
@@ -22,16 +23,6 @@ def debug_time(func):
     return wrapper
 
 
-def match_process(trace_list, temp_speed):
-    mi = MapInfo("./map_info/hz3.db")
-    pt_cnt = 0
-    for trace in trace_list:
-        pt_cnt += len(trace)
-        match_trace(trace, mi, temp_speed)
-        if pt_cnt > 10000:
-            break
-
-
 @debug_time
 def main():
     mi = MapInfo("./map_info/hz3.db")
@@ -43,13 +34,14 @@ def main():
     bt = clock()
     for trace in trace_list:
         pt_cnt += len(trace)
-        # print len(trace)
-        match_trace(trace, mi, temp_speed)
-        if pt_cnt > 50000:
+        if pt_cnt > 10000:
             break
+        mapMatching.match_trace(trace, mi, temp_speed)
+
     et = clock()
     print pt_cnt, et - bt
-    # road_speed = static_road_speed(temp_speed)
+    road_speed, cnt = mapMatching.static_road_speed(mi, temp_speed)
+    print cnt
     # print len(road_speed)
     # for road in sorted(road_speed.keys()):
     #     print road, road_speed[road]

@@ -11,7 +11,7 @@ from map_struct import Segment, SpeedLine
 from map_info.readMap import ORT_DBWAY
 import Queue
 
-MAX_OFFSET = 60
+MAX_OFFSET = 80
 
 
 class Candidate:
@@ -137,6 +137,7 @@ def pre_candidate(trace, map_info):
     for data in trace:
         xy_list.append([data.x, data.y])
     idx, dst = map_info.kdt.query_radius(xy_list, r=300, return_distance=True)
+    # print idx
     return idx
 
 
@@ -261,10 +262,13 @@ def init_search_param(trace, trace_idx, last_match_point, ramp):
     euclid_dist = calc_point_dist(last_match_point, cur_point)
     min_dist_thread = 1.5 * euclid_dist
     dist_thread = 6.0 * euclid_dist if ramp else 3.0 * euclid_dist
+    # strong prune, by distance vehicle can drive
     itv = trace[trace_idx] - trace[trace_idx - 1]
     spd0, spd1 = trace[trace_idx].speed, trace[trace_idx - 1].speed
-    ave_spd = max(60, max(spd0, spd1)) * 1.2
+    # expansion by 1.25
+    ave_spd = max(60, max(spd0, spd1)) * 1.25
     max_driven_dist = itv * ave_spd / 3.6
+    # print trace_idx, itv, max_driven_dist
     dist_thread, min_dist_thread = min(dist_thread, max_driven_dist), min(min_dist_thread, max_driven_dist)
     min_dist = {}
     come_from = {}
@@ -275,7 +279,7 @@ def init_search_param(trace, trace_idx, last_match_point, ramp):
 def init_queue(queue, map_index, last_mp, match_record, euclid_dist, cur_point, min_dist, come_from):
     """
     get first Search Node in queue
-    :param queue: 
+    :param queue: priority_queue
     :param map_index: 
     :param last_mp: 
     :param match_record: 
@@ -525,6 +529,7 @@ def get_road_speed(trace, match_records, temp_speed):
             trans = rec.best_trans
             if itv == 0:
                 continue
+
             spd = trans.route_dist / itv * 3.6
             for lp in trans.line_path:
                 line, dist, forward = lp.line, lp.dist, lp.forward

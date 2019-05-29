@@ -29,9 +29,9 @@ def debug_time(func):
 
 @debug_time
 def get_gps_data(all_data=False):
-    begin_time = datetime(2018, 5, 21, 16, 0, 0)
+    begin_time = datetime(2018, 5, 21, 11, 0, 0)
     conn = cx_Oracle.connect('hz/hz@192.168.11.88:1521/orcl')
-    end_time = begin_time + timedelta(minutes=60)
+    end_time = begin_time + timedelta(minutes=30)
     if all_data:
         sql = "select px, py, speed_time, state, speed, carstate, direction, vehicle_num from " \
               "TB_GPS_1805 t where speed_time >= :1 " \
@@ -125,7 +125,7 @@ def main():
     trans2redis(trace_dict)
 
 
-def get_his_list(trace_dict):
+def get_gps_list(trace_dict):
     """
     :param trace_dict: 
     :return: 
@@ -158,6 +158,8 @@ def get_his_list(trace_dict):
                     x_trace = [data]
                 else:
                     x_trace.append(data)
+            else:
+                x_trace.append(data)
             last_data = data
         if len(x_trace) > 1:
             trace_list.append(x_trace)
