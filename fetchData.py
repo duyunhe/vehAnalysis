@@ -132,6 +132,7 @@ def get_gps_list(trace_dict):
     :return: 
     """
     trace_list = []
+    pt_cnt = 0
     for veh, trace in trace_dict.iteritems():
         new_trace = []
         last_data = None
@@ -155,7 +156,9 @@ def get_gps_list(trace_dict):
                 itv = data - last_data
                 if itv > 180:
                     if len(x_trace) > 1:
-                        trace_list.append(x_trace)
+                        dist = calc_dist(x_trace[0], x_trace[-1])
+                        if dist > 1000:
+                            trace_list.append(x_trace)
                     x_trace = [data]
                 else:
                     x_trace.append(data)
@@ -163,8 +166,12 @@ def get_gps_list(trace_dict):
                 x_trace.append(data)
             last_data = data
         if len(x_trace) > 1:
-            trace_list.append(x_trace)
+            dist = calc_dist(x_trace[0], x_trace[-1])
+            if dist > 1000:
+                trace_list.append(x_trace)
+    for trace in trace_list:
+        pt_cnt += len(trace)
 
-    return trace_list
+    return trace_list, pt_cnt
 
 
