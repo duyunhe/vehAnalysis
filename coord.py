@@ -6,6 +6,8 @@
 
 from ctypes import *
 
+dll = WinDLL("CoordTransDLL.dll")
+
 
 class BLH(Structure):
     _fields_ = [("b", c_double),
@@ -25,23 +27,21 @@ def bl2xy(b, l):
     :param l: longitude
     :return: x, y
     """
-    dll = WinDLL("CoordTransDLL.dll")
     blh = BLH()
     blh.b = float(b)
     blh.l = float(l)
     blh.h = 0
     xyz = XYZ()
-    # global dll
+    global dll
     dll.WGS84_BLH_2_HZ_xyH(blh, byref(xyz))
     y, x = xyz.x, xyz.y
     return x, y
 
 
 def xy2bl(x, y):
-    dll = WinDLL("CoordTransDLL.dll")
     xyz = XYZ()
     blh = BLH()
     xyz.x, xyz.y, xyz.z = y, x, 0
-    # global dll
+    global dll
     dll.HZ_xyH_2_WGS84_BLH(xyz, byref(blh))
     return blh.b, blh.l

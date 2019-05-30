@@ -37,15 +37,17 @@ def stat_day(bt, et):
     trace_dict = get_gps_data(True, bt, et)
     trace_list = get_gps_list(trace_dict)
     print len(trace_list)
-    manager = multiprocessing.Manager()
-    temp_speed = manager.dict()
-    pool = multiprocessing.Pool(processes=12)
-    thread_num = 12
+    # manager = multiprocessing.Manager()
+    # temp_speed = manager.dict()
+    # pool = multiprocessing.Pool(processes=2)
+    # thread_num = 2
     bt = clock()
-    for i in range(thread_num):
-        pool.apply_async(match_process, args=(trace_list[i::thread_num], temp_speed))
-    pool.close()
-    pool.join()
+    temp_speed = defaultdict(list)
+    match_process(trace_list, temp_speed)
+    # for i in range(thread_num):
+    #     pool.apply_async(match_process, args=(trace_list[i::thread_num], temp_speed))
+    # pool.close()
+    # pool.join()
     et = clock()
     print "stat one day", et - bt
     # temp_speed = defaultdict(list)
