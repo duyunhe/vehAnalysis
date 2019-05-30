@@ -57,6 +57,9 @@ def read_sqlite(filename):
     cur = conn.cursor()
     sql = "select s_id, seq, px, py from tb_seg_point order by s_id, seq"
     cur.execute(sql)
+    global pt_cnt, map_uid
+    pt_cnt = 0
+    map_uid = {}
     point_list, line_list = [], []
     last_sid = -1
     for item in cur:
