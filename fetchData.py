@@ -28,10 +28,11 @@ def debug_time(func):
 
 
 @debug_time
-def get_gps_data(all_data=False):
-    begin_time = datetime(2018, 5, 21, 11, 0, 0)
+def get_gps_data(all_data=False, begin_time=None, end_time=None):
+    if begin_time is None and end_time is None:
+        begin_time = datetime(2018, 5, 1, 1, 0, 0)
+        end_time = begin_time + timedelta(minutes=30)
     conn = cx_Oracle.connect('hz/hz@192.168.11.88:1521/orcl')
-    end_time = begin_time + timedelta(minutes=30)
     if all_data:
         sql = "select px, py, speed_time, state, speed, carstate, direction, vehicle_num from " \
               "TB_GPS_1805 t where speed_time >= :1 " \

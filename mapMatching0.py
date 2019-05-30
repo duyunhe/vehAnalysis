@@ -8,7 +8,7 @@ from time import clock
 from geo import point2segment, point_segment_prob, calc_include_angle3, calc_point_dist, \
     route_trans_prob, path_forward
 from map_struct import Segment, SpeedLine
-from map_info.readMap import ORT_DBWAY
+from map_info.readMap import ORT_DBWAY, ORT_ONEWAY
 import Queue
 
 MAX_OFFSET = 80
@@ -107,7 +107,7 @@ def match_trace(trace, map_info, temp_speed):
     """
     :param trace: TaxiData
     :param map_info: MapInfo
-    :param temp_speed: Dict { LineSpeed: [[speed, dist], ...]
+    :param temp_speed: Dict { LineSpeed: [[speed, dist, veh], ...]
     :return: 
     """
     # for multiprocessor use
@@ -519,7 +519,7 @@ def get_road_speed(trace, match_records, temp_speed):
     :param temp_speed:
     :return: 
     """
-    # for speed calculation, { line: [[speed0, dist0], [speed1, dist1]] }
+    # for speed calculation, { line: [[speed0, dist0, veh, time], [speed1, dist1 ...], ...] }
     # line has one lid and one attribute if it is forward
     # then for each line, calculate weighted average speed
     for i, rec in enumerate(match_records):
@@ -538,20 +538,25 @@ def get_road_speed(trace, match_records, temp_speed):
                 # filter it
                 if dist > 0 and spd < 120:
                     try:
-                        temp_speed[ln].append([spd, dist])
+                        temp_speed[ln].append([spd, dist, trace[0].veh, trace[0].stime])
                     except KeyError:
-                        temp_speed[ln] = [[spd, dist]]
+                        temp_speed[ln] = [[spd, dist, trace[0].veh, trace[0].stime]]
     # every vehicle has contribute several speeds for roads,
     # static should be overall, calculated later
 
 
-def static_road_speed(temp_speed):
+def static_road_speed(map_info, temp_speed):
     """
+    :param map_info
     :param temp_speed: 
     :return: road_speed : Dict { LineSpeed: speed }
     """
     road_speed = {}
+    speed_cnt = 0
     for ln, spd_list in temp_speed.items():
+        if map_info.line_list[ln.lid].ort == ORT_ONEWAY and not ln.fwd:
+            continue
+        speed_cnt += len(spd_list)
         total, w = 0, 0
         for item in spd_list:
             spd, dist = item[:]
@@ -564,7 +569,7 @@ def static_road_speed(temp_speed):
     # keys.sort()
     # for key in keys:
     #     print key, road_speed[key]
-    return road_speed
+    return road_speed, speed_cnt
 
 
 def k0(trace, map_info):

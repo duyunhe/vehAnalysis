@@ -5,9 +5,11 @@
 # @File    : historySpeed.py
 
 
-from fetchRedis import get_gps_data, get_gps_list
-import mapMatching
+import multiprocessing
+from fetchData import get_gps_data, get_gps_list
 import mapMatching0
+from datetime import datetime, timedelta
+from db.saveHisSpeed import save_speed
 from collections import defaultdict
 from time import clock
 from map_info.readMap import MapInfo
@@ -23,28 +25,50 @@ def debug_time(func):
     return wrapper
 
 
-@debug_time
-def main():
+def match_process(trace_list, temp_speed):
     mi = MapInfo("./map_info/hz3.db")
-    trace_dict = get_gps_data()
-    trace_list = get_gps_list(trace_dict)
-    # print len(trace_list)
-    temp_speed = defaultdict(list)
-    pt_cnt = 0
-    bt = clock()
     for trace in trace_list:
-        pt_cnt += len(trace)
-        if pt_cnt > 10000:
-            break
-        mapMatching.match_trace(trace, mi, temp_speed)
+        mapMatching0.match_trace(trace, mi, temp_speed)
 
+
+@debug_time
+def stat_day(bt, et):
+    # mi = MapInfo("./map_info/hz3.db")
+    trace_dict = get_gps_data(True, bt, et)
+    trace_list = get_gps_list(trace_dict)
+    print len(trace_list)
+    manager = multiprocessing.Manager()
+    temp_speed = manager.dict()
+    pool = multiprocessing.Pool(processes=12)
+    thread_num = 12
+    bt = clock()
+    for i in range(thread_num):
+        pool.apply_async(match_process, args=(trace_list[i::thread_num], temp_speed))
+    pool.close()
+    pool.join()
     et = clock()
-    print pt_cnt, et - bt
-    road_speed, cnt = mapMatching.static_road_speed(mi, temp_speed)
-    print cnt
+    print "stat one day", et - bt
+    # temp_speed = defaultdict(list)
+    # pt_cnt = 0
+    # for trace in trace_list:
+    #     pt_cnt += len(trace)
+    #     # if pt_cnt > 10000:
+    #     #     break
+    #     mapMatching0.match_trace(trace, mi, temp_speed)
+    save_speed(temp_speed)
+    # road_speed, cnt = mapMatching0.static_road_speed(mi, temp_speed)
+    # print cnt
     # print len(road_speed)
     # for road in sorted(road_speed.keys()):
     #     print road, road_speed[road]
+
+
+def main():
+    bt = datetime(2018, 5, 1, 1)
+    ft = datetime(2018, 6, 1)
+    while bt < ft:
+        et = bt + timedelta(hours=4)
+        stat_day(bt, et)
 
 
 if __name__ == '__main__':

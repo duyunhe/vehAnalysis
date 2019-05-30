@@ -6,7 +6,7 @@
 
 
 from fetchRedis import get_gps_data, get_gps_list
-from mapMatching import match_trace, static_road_speed
+from mapMatching0 import match_trace, static_road_speed
 from collections import defaultdict
 from time import clock
 from map_info.readMap import MapInfo
