@@ -35,8 +35,8 @@ def match_process(trace_list, temp_speed):
 def stat_day(bt, et):
     # mi = MapInfo("./map_info/hz3.db")
     trace_dict = get_gps_data(True, bt, et)
-    trace_list = get_gps_list(trace_dict)
-    print len(trace_list)
+    trace_list, pt_cnt = get_gps_list(trace_dict)
+    print len(trace_list), pt_cnt
     # manager = multiprocessing.Manager()
     # temp_speed = manager.dict()
     # pool = multiprocessing.Pool(processes=2)
@@ -66,11 +66,13 @@ def stat_day(bt, et):
 
 
 def main():
-    bt = datetime(2018, 5, 1, 1)
-    ft = datetime(2018, 6, 1)
+    bt = datetime(2017, 11, 1, 1)
+    ft = datetime(2017, 12, 1)
     while bt < ft:
+        print bt
         et = bt + timedelta(hours=4)
         stat_day(bt, et)
+        bt += timedelta(days=1)
 
 
 if __name__ == '__main__':

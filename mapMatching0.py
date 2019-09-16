@@ -102,7 +102,6 @@ def debug_time(func):
     return wrapper
 
 
-# @debug_time
 def match_trace(trace, map_info, temp_speed):
     """
     :param trace: TaxiData
@@ -570,9 +569,3 @@ def static_road_speed(map_info, temp_speed):
     # for key in keys:
     #     print key, road_speed[key]
     return road_speed, speed_cnt
-
-
-def k0(trace, map_info):
-    for data in trace:
-        xy_list = [[data.x, data.y]]
-        idx, dst = map_info.kdt.query_radius(xy_list, r=300, return_distance=True)

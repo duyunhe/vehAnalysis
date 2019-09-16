@@ -11,6 +11,7 @@ from collections import defaultdict
 from time import clock
 from map_info.readMap import MapInfo
 import multiprocessing
+from datetime import datetime
 
 
 def debug_time(func):
@@ -32,8 +33,7 @@ def main():
     for veh, trace in trace_dict.iteritems():
         match_trace(trace, mi, temp_speed)
         i += 1
-        break
-    road_speed = static_road_speed(temp_speed)
+    road_speed, cnt = static_road_speed(mi, temp_speed)
     print len(road_speed)
 
 
@@ -45,23 +45,29 @@ def match_process(trace_list, temp_speed):
 
 @debug_time
 def multi_main():
+    bt = clock()
     trace_dict = get_gps_data()
-    trace_list = get_gps_list(trace_dict)
-    print len(trace_list)
+    trace_list, cnt = get_gps_list(trace_dict)
+    print len(trace_list), cnt
+    if cnt == 0:
+        return
+    et = clock()
+    print et - bt
 
     manager = multiprocessing.Manager()
     temp_speed = manager.dict()
-    pc_list = []
-    thread_num = 2
+
+    pool = multiprocessing.Pool(processes=12)
+    thread_num = 12
+    bt = clock()
     for i in range(thread_num):
-        p = multiprocessing.Process(target=match_process, args=(trace_list[i::thread_num], temp_speed))
-        p.daemon = True
-        pc_list.append(p)
-    for p in pc_list:
-        p.start()
-    for p in pc_list:
-        p.join()
-    road_speed = static_road_speed(temp_speed)
+        pool.apply_async(match_process, args=(trace_list[i::thread_num], temp_speed))
+    pool.close()
+    pool.join()
+    et = clock()
+    print "multi", et - bt
+    mi = MapInfo("./map_info/hz3.db")
+    road_speed, cnt = static_road_speed(mi, temp_speed)
     print len(road_speed)
 
 

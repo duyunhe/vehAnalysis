@@ -35,7 +35,7 @@ def get_gps_data(all_data=False, begin_time=None, end_time=None):
     conn = cx_Oracle.connect('hz/hz@192.168.11.88:1521/orcl')
     if all_data:
         sql = "select px, py, speed_time, state, speed, carstate, direction, vehicle_num from " \
-              "TB_GPS_1805 t where speed_time >= :1 " \
+              "TB_GPS_1711 t where speed_time >= :1 " \
               "and speed_time < :2 and state = 1 order by speed_time "
     else:
         sql = "select px, py, speed_time, state, speed, carstate, direction, vehicle_num from " \

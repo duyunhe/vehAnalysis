@@ -87,13 +87,22 @@ def get_gps_list(trace_dict):
             if esti:
                 new_trace.append(data)
         last_data = None
-        flag = False
+        x_trace = []
         for data in new_trace:
             if last_data is not None:
                 itv = data - last_data
                 if itv > 180:
-                    flag = True
+                    if len(x_trace) > 1:
+                        trace_list.append(x_trace)
+                    x_trace = [data]
+                else:
+                    x_trace.append(data)
+            else:
+                x_trace.append(data)
             last_data = data
-        if not flag:
-            trace_list.append(new_trace)
-    return trace_list
+        if len(x_trace) > 1:
+            trace_list.append(x_trace)
+    pt_cnt = 0
+    for trace in trace_list:
+        pt_cnt += len(trace)
+    return trace_list, pt_cnt
