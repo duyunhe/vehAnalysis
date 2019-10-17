@@ -30,20 +30,32 @@ def save_speed_detail(temp_speed):
     conn.close()
 
 
-def save_speed(temp_speed, dt):
+def save_speed(temp_speed, dt, cnt_dict):
     """
     :param temp_speed: { (lid, fwd): speed }
     :param dt: datetime
+    :param cnt_dict: { (lid, fwd) : cnt }
     :return: 
     """
     conn = cx_Oracle.connect("hz/hz@192.168.11.88/orcl")
     tup_list = []
     for ln, speed in temp_speed.items():
-        lid, fwd = ln.lid, '1' if ln.fwd else '0'
-        tup_list.append((lid, speed, fwd, dt))
-    ins_sql = "insert into tb_road_speed_pre (rid, speed, ort, dbtime) values(:1, :2, :3, :4)"
+        cnt = cnt_dict[ln]
+        lid, fwd = ln[0], '1' if ln[1] else '0'
+        tup_list.append((lid, speed, fwd, dt, cnt))
+    ins_sql = "insert into tb_road_speed_pre (rid, speed, ort, dbtime, cnt) values(:1, :2, :3, :4, :5)"
     cur = conn.cursor()
     cur.executemany(ins_sql, tup_list)
+    conn.commit()
+    cur.close()
+    conn.close()
+
+
+def truncate_table():
+    conn = cx_Oracle.connect("hz/hz@192.168.11.88/orcl")
+    cur = conn.cursor()
+    sql = "truncate table tb_road_speed_pre"
+    cur.execute(sql)
     conn.commit()
     cur.close()
     conn.close()

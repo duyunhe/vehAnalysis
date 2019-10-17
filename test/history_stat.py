@@ -12,7 +12,7 @@ from time import clock
 from map_info.readMap import MapInfo
 import multiprocessing
 from datetime import datetime, timedelta
-from db.saveHisSpeed import save_speed
+from db.saveHisSpeed import save_speed, truncate_table
 
 
 def debug_time(func):
@@ -34,13 +34,13 @@ def match_process(trace_list, temp_speed):
 @debug_time
 def multi_main(bt):
     et = bt + timedelta(hours=1)
-    trace_dict = get_gps_data(all_data=True, begin_time=bt, end_time=et)
+    trace_dict = get_gps_data(all_data=False, begin_time=bt, end_time=et)
     trace_list, cnt = get_gps_list(trace_dict)
     print len(trace_list), cnt
     if cnt == 0:
         return
     manager = multiprocessing.Manager()
-    temp_speed = manager.dict()
+    temp_speed = manager.list()
     # 多进程支持
     thread_num = 16
     pool = multiprocessing.Pool(processes=thread_num)
@@ -53,7 +53,7 @@ def multi_main(bt):
     # print "multi", et - bt
     mi = MapInfo("../map_info/hz3.db")
     road_speed, cnt = static_road_speed(mi, temp_speed)
-    save_speed(road_speed, bt)
+    save_speed(road_speed, bt, cnt)
 
 
 def main():
@@ -70,6 +70,7 @@ def main():
 
 
 def main1():
+    truncate_table()
     bt = datetime(2018, 5, 5, 4)
     multi_main(bt)
 

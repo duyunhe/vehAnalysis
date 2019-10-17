@@ -101,14 +101,19 @@ def read_sqlite(filename):
 
     sql = "select lid, fwd, rid from tb_map"
     cur.execute(sql)
-    road_map = {}
+    road_map, reverse_map = {}, {}
     for item in cur:
         lid, fwd, rid = item
+        if fwd == u'1':
+            fwd = True
+        else:
+            fwd = False
         road_map[(lid, fwd)] = rid
+        reverse_map[rid] = (lid, fwd)
 
     cur.close()
     conn.close()
-    return line_list, point_list, road_map
+    return line_list, point_list, road_map, reverse_map
 
 
 def make_kdtree(point_list):
@@ -123,7 +128,7 @@ def make_kdtree(point_list):
 class MapInfo(object):
     # @debug_time
     def __init__(self, db_name="hz3.db"):
-        self.line_list, self.point_list, self.road_map = read_sqlite(db_name)
+        self.line_list, self.point_list, self.road_map, self.reverse_map = read_sqlite(db_name)
         self.kdt, self.x = make_kdtree(self.point_list)
 
 

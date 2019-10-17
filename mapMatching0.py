@@ -10,6 +10,7 @@ from geo import point2segment, point_segment_prob, calc_include_angle3, calc_poi
 from map_struct import Segment, SpeedLine
 from map_info.readMap import ORT_DBWAY, ORT_ONEWAY
 import Queue
+from collections import defaultdict
 
 MAX_OFFSET = 80
 
@@ -106,7 +107,7 @@ def match_trace(trace, map_info, temp_speed):
     """
     :param trace: TaxiData
     :param map_info: MapInfo
-    :param temp_speed: Dict { LineSpeed: [[speed, dist, veh], ...]
+    :param temp_speed: list { [[ln, speed, dist, veh], ...]
     :return: 
     """
     # for multiprocessor use
@@ -128,7 +129,7 @@ def match_trace(trace, map_info, temp_speed):
     # find path
     global_match(trace_match)
     # road & speed
-    get_road_speed(trace, trace_match, temp_speed)
+    get_road_speed(trace, trace_match, temp_speed, map_info)
 
 
 def pre_candidate(trace, map_info):
@@ -511,14 +512,15 @@ def global_match(match_records):
                 rec.best_trans, min_path = ti, ti.route_dist
 
 
-def get_road_speed(trace, match_records, temp_speed):
+def get_road_speed(trace, match_records, temp_speed, map_info):
     """
     :param trace:
     :param match_records:
-    :param temp_speed:
+    :param temp_speed: list
+    :param map_info
     :return: 
     """
-    # for speed calculation, { line: [[speed0, dist0, veh, time], [speed1, dist1 ...], ...] }
+    # for speed calculation, { [ln, speed0, dist0, veh, time], [ln, speed1, dist1 ...], ...] }
     # line has one lid and one attribute if it is forward
     # then for each line, calculate weighted average speed
     for i, rec in enumerate(match_records):
@@ -528,19 +530,20 @@ def get_road_speed(trace, match_records, temp_speed):
             trans = rec.best_trans
             if itv == 0:
                 continue
-
+            road_map = map_info.road_map
             spd = trans.route_dist / itv * 3.6
             for lp in trans.line_path:
                 line, dist, forward = lp.line, lp.dist, lp.forward
-                ln = SpeedLine(line.lid, forward)
+                # ln = SpeedLine(line.lid, forward)
+                ln = (line.lid, forward)
+                if ln not in road_map:
+                    continue
+                rid = road_map[ln]
                 # gps may cross over too much distance and because of time error, interval time is still 20 sec.
                 # filter it
                 if dist > 0 and spd < 120:
-                    # print ln, spd, dist, trace[0].veh, trace[i].stime, i
-                    try:
-                        temp_speed[ln].append([spd, dist, trace[0].veh, trace[0].stime])
-                    except KeyError:
-                        temp_speed[ln] = [[spd, dist, trace[0].veh, trace[0].stime]]
+                    print ln, spd, dist, trace[0].veh, trace[i].stime, i
+                    temp_speed.append([ln, spd, dist, trace[0].veh, trace[0].stime])
     # every vehicle has contribute several speeds for roads,
     # static should be overall, calculated later
 
@@ -548,32 +551,18 @@ def get_road_speed(trace, match_records, temp_speed):
 def static_road_speed(map_info, temp_speed):
     """
     :param map_info
-    :param temp_speed: { ln: speed0, dist0, veh, time, i }
-    :return: road_speed : Dict { LineSpeed: speed }
+    :param temp_speed: [list [ speed0, dist0, veh, time, i], .. ]
+    :return: road_speed : Dict { (lid, fwd): speed }
     """
-    road_speed = {}
-    speed_cnt = 0
-    for ln, spd_list in temp_speed.items():
-        if map_info.line_list[ln.lid].ort == ORT_ONEWAY and not ln.fwd:
-            continue
-        lid, fwd = ln.lid, ln.fwd
-        fwd = u'1' if fwd else u'0'
-        if (lid, fwd) not in map_info.road_map.keys():
-            continue
-        # if lid == 2965 and fwd == u'1':
-        # for spd_info in spd_list:
-        #     print lid, spd_info
-        speed_cnt += len(spd_list)
-        total, w = 0, 0
-        for item in spd_list:
-            spd, dist, veh, dt = item[:]
-            total, w = spd * dist + total, dist + w
-        if w == 0:
-            continue
-        else:
-            road_speed[ln] = total / w
-    # keys = temp_speed.keys()
-    # keys.sort()
-    # for key in keys:
-    #     print key, road_speed[key]
+    road_speed, total_speed = {}, defaultdict(float)
+    speed_cnt, speed_weight = defaultdict(int), defaultdict(float)
+    for spd_list in temp_speed:
+        ln, spd, dist, _, _ = spd_list
+        # ln = map_info.reverse_map[rid]
+        speed_cnt[ln] += 1
+        total_speed[ln] += spd * dist
+        speed_weight[ln] += dist
+    for ln, total in total_speed.items():
+        if speed_weight[ln] != 0:
+            road_speed[ln] = total_speed[ln] / speed_weight[ln]
     return road_speed, speed_cnt
