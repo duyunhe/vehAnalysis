@@ -99,9 +99,16 @@ def read_sqlite(filename):
                     ld = LinkDesc(line, i, True)
                     line.point_list[i].add_link(ld, line.point_list[i + 1])
 
+    sql = "select lid, fwd, rid from tb_map"
+    cur.execute(sql)
+    road_map = {}
+    for item in cur:
+        lid, fwd, rid = item
+        road_map[(lid, fwd)] = rid
+
     cur.close()
     conn.close()
-    return line_list, point_list
+    return line_list, point_list, road_map
 
 
 def make_kdtree(point_list):
@@ -116,7 +123,7 @@ def make_kdtree(point_list):
 class MapInfo(object):
     # @debug_time
     def __init__(self, db_name="hz3.db"):
-        self.line_list, self.point_list = read_sqlite(db_name)
+        self.line_list, self.point_list, self.road_map = read_sqlite(db_name)
         self.kdt, self.x = make_kdtree(self.point_list)
 
 

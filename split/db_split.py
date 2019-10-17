@@ -172,8 +172,8 @@ def delete_data():
 
 def main():
     delete_data()
-    bt = datetime(2018, 5, 1, 12)
-    ft = datetime(2018, 5, 1, 16)
+    bt = datetime(2018, 5, 1, 0)
+    ft = datetime(2018, 5, 5, 0)
     while bt < ft:
         et = bt + timedelta(hours=1)
         meter_dict = get_meter_data(bt, et)

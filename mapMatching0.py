@@ -555,10 +555,17 @@ def static_road_speed(map_info, temp_speed):
     for ln, spd_list in temp_speed.items():
         if map_info.line_list[ln.lid].ort == ORT_ONEWAY and not ln.fwd:
             continue
+        lid, fwd = ln.lid, ln.fwd
+        fwd = u'1' if fwd else u'0'
+        if (lid, fwd) not in map_info.road_map.keys():
+            continue
+        if lid == 2965 and fwd == u'1':
+            for spd_info in spd_list:
+                print spd_info[2]
         speed_cnt += len(spd_list)
         total, w = 0, 0
         for item in spd_list:
-            spd, dist = item[:]
+            spd, dist, veh, dt = item[:]
             total, w = spd * dist + total, dist + w
         if w == 0:
             continue

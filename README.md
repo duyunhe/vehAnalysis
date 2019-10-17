@@ -9,3 +9,4 @@ mapMatching.match_trace
 参数trace, map_info，得到MatchRecord列表，记录下每个GPS点在道路路网上的匹配点（有多个），在模型下得到的最佳匹配点，以及前一个点到后一个点的路径
 
 
+主程序：analysisGPS.py

@@ -30,12 +30,12 @@ def debug_time(func):
 @debug_time
 def get_gps_data(all_data=False, begin_time=None, end_time=None):
     if begin_time is None and end_time is None:
-        begin_time = datetime(2018, 5, 1, 1, 0, 0)
-        end_time = begin_time + timedelta(minutes=30)
+        begin_time = datetime(2018, 5, 1, 12, 0, 0)
+        end_time = begin_time + timedelta(minutes=60)
     conn = cx_Oracle.connect('hz/hz@192.168.11.88:1521/orcl')
     if all_data:
         sql = "select px, py, speed_time, state, speed, carstate, direction, vehicle_num from " \
-              "TB_GPS_1711 t where speed_time >= :1 " \
+              "TB_GPS_1805 t where speed_time >= :1 " \
               "and speed_time < :2 and state = 1 order by speed_time "
     else:
         sql = "select px, py, speed_time, state, speed, carstate, direction, vehicle_num from " \
@@ -56,6 +56,9 @@ def get_gps_data(all_data=False, begin_time=None, end_time=None):
             car_state = int(item[5])
             ort = float(item[6])
             veh = item[7][-6:]
+            veh_head = veh[:2]
+            if veh_head != 'AT' and veh_head != 'AL':
+                continue
             # if veh != 'AT0956':
             #     continue
             taxi_data = TaxiData(veh, px, py, stime, state, speed, car_state, ort)
@@ -157,7 +160,7 @@ def get_gps_list(trace_dict):
                 if itv > 180:
                     if len(x_trace) > 1:
                         dist = calc_dist(x_trace[0], x_trace[-1])
-                        if dist > 1000:
+                        if dist > 500:
                             trace_list.append(x_trace)
                     x_trace = [data]
                 else:
@@ -167,11 +170,9 @@ def get_gps_list(trace_dict):
             last_data = data
         if len(x_trace) > 1:
             dist = calc_dist(x_trace[0], x_trace[-1])
-            if dist > 1000:
+            if dist > 500:
                 trace_list.append(x_trace)
     for trace in trace_list:
         pt_cnt += len(trace)
 
     return trace_list, pt_cnt
-
-
