@@ -536,6 +536,7 @@ def get_road_speed(trace, match_records, temp_speed):
                 # gps may cross over too much distance and because of time error, interval time is still 20 sec.
                 # filter it
                 if dist > 0 and spd < 120:
+                    # print ln, spd, dist, trace[0].veh, trace[i].stime, i
                     try:
                         temp_speed[ln].append([spd, dist, trace[0].veh, trace[0].stime])
                     except KeyError:
@@ -547,7 +548,7 @@ def get_road_speed(trace, match_records, temp_speed):
 def static_road_speed(map_info, temp_speed):
     """
     :param map_info
-    :param temp_speed: 
+    :param temp_speed: { ln: speed0, dist0, veh, time, i }
     :return: road_speed : Dict { LineSpeed: speed }
     """
     road_speed = {}
@@ -559,9 +560,9 @@ def static_road_speed(map_info, temp_speed):
         fwd = u'1' if fwd else u'0'
         if (lid, fwd) not in map_info.road_map.keys():
             continue
-        if lid == 2965 and fwd == u'1':
-            for spd_info in spd_list:
-                print spd_info[2]
+        # if lid == 2965 and fwd == u'1':
+        # for spd_info in spd_list:
+        #     print lid, spd_info
         speed_cnt += len(spd_list)
         total, w = 0, 0
         for item in spd_list:

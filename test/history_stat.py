@@ -39,7 +39,6 @@ def multi_main(bt):
     print len(trace_list), cnt
     if cnt == 0:
         return
-
     manager = multiprocessing.Manager()
     temp_speed = manager.dict()
     # 多进程支持
@@ -54,7 +53,7 @@ def multi_main(bt):
     # print "multi", et - bt
     mi = MapInfo("../map_info/hz3.db")
     road_speed, cnt = static_road_speed(mi, temp_speed)
-    # save_speed(road_speed, bt)
+    save_speed(road_speed, bt)
 
 
 def main():

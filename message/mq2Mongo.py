@@ -2,7 +2,7 @@
 # @Time    : 2019/5/29 18:17
 # @Author  : yhdu@tongwoo.cn
 # @简介    : 
-# @File    : mq2MongoDB.py
+# @File    : mq2Mongo.py
 
 import pymongo
 import stomp

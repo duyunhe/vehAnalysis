@@ -40,7 +40,7 @@ def get_gps_data(all_data=False, begin_time=None, end_time=None):
     else:
         sql = "select px, py, speed_time, state, speed, carstate, direction, vehicle_num from " \
           "TB_GPS_1805 t where speed_time >= :1 " \
-          "and speed_time < :2 and vehicle_num = '浙AT2081' and state = 1 order by speed_time "
+          "and speed_time < :2 and vehicle_num = '浙AT3407' and state = 1 order by speed_time "
 
     tup = (begin_time, end_time)
     cursor = conn.cursor()
@@ -77,7 +77,7 @@ def get_gps_data(all_data=False, begin_time=None, end_time=None):
                 # 过滤异常
                 if data.car_state == 1:  # 非精确
                     esti = False
-                elif dist < 10:  # GPS的误差在10米，不准确
+                elif dist < 20:  # GPS的误差在10米，不准确
                     esti = False
             last_data = data
             if esti:

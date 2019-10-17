@@ -1,6 +1,5 @@
 # coding=utf-8
 import math
-
 import numpy as np
 from map_struct import Point
 
@@ -33,19 +32,6 @@ def calc_dist(pt0, pt1):
     v0 = np.array(pt0)
     v1 = np.array(pt1)
     dist = np.linalg.norm(v0 - v1)
-    return dist
-
-
-def calc_bl_dist(pt0, pt1):
-    """
-    计算经纬度距离
-    :param pt0: [lng, lat]
-    :param pt1: [lng, lat]
-    :return: 
-    """
-    x0, y0 = bl2xy(pt0[1], pt0[0])
-    x1, y1 = bl2xy(pt1[1], pt1[0])
-    dist = calc_dist([x0, y0], [x1, y1])
     return dist
 
 

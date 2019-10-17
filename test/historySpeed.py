@@ -75,5 +75,10 @@ def main():
         bt += timedelta(days=1)
 
 
+def main1():
+    mi = MapInfo("./map_info/hz3.db")
+    mi2 = MapInfo("./map_info/hz3.db")
+
+
 if __name__ == '__main__':
-    main()
+    main1()
