@@ -32,9 +32,9 @@ def match_process(trace_list, temp_speed):
 
 
 @debug_time
-def multi_main(bt):
+def multi_main(bt, all_data=True):
     et = bt + timedelta(hours=1)
-    trace_dict = get_gps_data(all_data=False, begin_time=bt, end_time=et)
+    trace_dict = get_gps_data(all_data=all_data, begin_time=bt, end_time=et)
     trace_list, cnt = get_gps_list(trace_dict)
     print len(trace_list), cnt
     if cnt == 0:
@@ -71,7 +71,7 @@ def main():
 
 def main1():
     truncate_table()
-    bt = datetime(2018, 5, 5, 4)
+    bt = datetime(2018, 5, 1, 1)
     multi_main(bt)
 
 

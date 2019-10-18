@@ -28,7 +28,7 @@ def debug_time(func):
 
 
 @debug_time
-def get_gps_data(all_data=False, begin_time=None, end_time=None):
+def get_all_data(all_data=False, begin_time=None, end_time=None):
     if begin_time is None and end_time is None:
         begin_time = datetime(2018, 5, 1, 12, 0, 0)
         end_time = begin_time + timedelta(minutes=60)
@@ -36,11 +36,11 @@ def get_gps_data(all_data=False, begin_time=None, end_time=None):
     if all_data:
         sql = "select px, py, speed_time, state, speed, carstate, direction, vehicle_num from " \
               "TB_GPS_1805 t where speed_time >= :1 " \
-              "and speed_time < :2 and state = 1 order by speed_time "
+              "and speed_time < :2 order by speed_time "
     else:
         sql = "select px, py, speed_time, state, speed, carstate, direction, vehicle_num from " \
           "TB_GPS_1805 t where speed_time >= :1 " \
-          "and speed_time < :2 and vehicle_num = '浙AT3407' and state = 1 order by speed_time "
+          "and speed_time < :2 and vehicle_num = '浙AT8730' order by speed_time "
 
     tup = (begin_time, end_time)
     cursor = conn.cursor()
@@ -58,6 +58,64 @@ def get_gps_data(all_data=False, begin_time=None, end_time=None):
             veh = item[7][-6:]
             veh_head = veh[:2]
             if veh_head != 'AT' and veh_head != 'AL':
+                continue
+            # if veh != 'AT0956':
+            #     continue
+            taxi_data = TaxiData(veh, px, py, stime, state, speed, car_state, ort)
+            try:
+                veh_trace[veh].append(taxi_data)
+            except KeyError:
+                veh_trace[veh] = [taxi_data]
+    cursor.close()
+    conn.close()
+    return veh_trace
+
+
+def get_all_on(conn):
+    cur = conn.cursor()
+    sql = "select vehicle_num from tb_all_on"
+    cur.execute(sql)
+    veh_set = set()
+    for item in cur:
+        veh_set.add(item[0])
+    cur.close()
+    return veh_set
+
+
+@debug_time
+def get_gps_data(all_data=False, begin_time=None, end_time=None):
+    if begin_time is None and end_time is None:
+        begin_time = datetime(2018, 5, 1, 12, 0, 0)
+        end_time = begin_time + timedelta(minutes=60)
+    conn = cx_Oracle.connect('hz/hz@192.168.11.88:1521/orcl')
+    on_set = get_all_on(conn)
+    if all_data:
+        sql = "select px, py, speed_time, state, speed, carstate, direction, vehicle_num from " \
+              "TB_GPS_1805 t where speed_time >= :1 " \
+              "and speed_time < :2 and state = 1 order by speed_time "
+    else:
+        sql = "select px, py, speed_time, state, speed, carstate, direction, vehicle_num from " \
+          "TB_GPS_1805 t where speed_time >= :1 " \
+          "and speed_time < :2 and vehicle_num = '浙ALT002' and state = 1 order by speed_time "
+
+    tup = (begin_time, end_time)
+    cursor = conn.cursor()
+    cursor.execute(sql, tup)
+    veh_trace = {}
+    for item in cursor.fetchall():
+        lng, lat = map(float, item[0:2])
+        if 119 < lng < 121 and 29 < lat < 31:
+            px, py = bl2xy(lat, lng)
+            state = int(item[3])
+            stime = item[2]
+            speed = float(item[4])
+            car_state = int(item[5])
+            ort = float(item[6])
+            veh = item[7][-6:]
+            veh_head = veh[:2]
+            if veh_head != 'AT' and veh_head != 'AL':
+                continue
+            if veh in on_set:
                 continue
             # if veh != 'AT0956':
             #     continue

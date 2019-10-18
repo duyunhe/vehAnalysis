@@ -117,7 +117,7 @@ def draw_gps(gps_dict):
 def main():
     seg_list = load_map()
     draw_road(seg_list)
-    dt = datetime(2018, 5, 5, 4)
+    dt = datetime(2018, 5, 1, 1)
     gps_dict = get_gps_data(all_data=False, begin_time=dt, end_time=dt + timedelta(hours=1))
     draw_gps(gps_dict)
     plt.show()

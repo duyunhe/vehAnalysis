@@ -542,7 +542,7 @@ def get_road_speed(trace, match_records, temp_speed, map_info):
                 # gps may cross over too much distance and because of time error, interval time is still 20 sec.
                 # filter it
                 if dist > 0 and spd < 120:
-                    print ln, spd, dist, trace[0].veh, trace[i].stime, i
+                    # print ln, spd, dist, trace[0].veh, trace[i].stime, i
                     temp_speed.append([ln, spd, dist, trace[0].veh, trace[0].stime])
     # every vehicle has contribute several speeds for roads,
     # static should be overall, calculated later
