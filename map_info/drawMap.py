@@ -99,7 +99,7 @@ def tti_color(tti):
 def draw_road(seg_list, road_state=None):
     for line in seg_list:
         draw_seg(line)
-        if line.lid == 2965 or line.lid == 1219:
+        if line.lid == 4858:
             draw_line_idx(line, line.lid)
 
 
