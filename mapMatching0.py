@@ -536,9 +536,10 @@ def get_road_speed(trace, match_records, temp_speed, map_info):
                 line, dist, forward = lp.line, lp.dist, lp.forward
                 # ln = SpeedLine(line.lid, forward)
                 ln = (line.lid, forward)
+                # if line.lid == 5395 and forward:
+                #     print line.lid, forward, trace[0].veh
                 if ln not in road_map:
                     continue
-                rid = road_map[ln]
                 # gps may cross over too much distance and because of time error, interval time is still 20 sec.
                 # filter it
                 if dist > 0 and spd < 120:
