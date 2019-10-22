@@ -40,7 +40,7 @@ def get_all_data(all_data=False, begin_time=None, end_time=None):
     else:
         sql = "select px, py, speed_time, state, speed, carstate, direction, vehicle_num from " \
           "TB_GPS_1805 t where speed_time >= :1 " \
-          "and speed_time < :2 and vehicle_num = '浙AT8730' order by speed_time "
+          "and speed_time < :2 and vehicle_num = '浙ALT002' order by speed_time "
 
     tup = (begin_time, end_time)
     cursor = conn.cursor()
@@ -83,6 +83,68 @@ def get_all_on(conn):
 
 
 @debug_time
+def get_formal_data(all_data=False, begin_time=None, end_time=None):
+    conn = cx_Oracle.connect('hzczdsj/tw85450077@192.168.0.80:1521/orcl')
+    on_set = get_all_on(conn)
+    if all_data:
+        sql = "select px, py, speed_time, state, carstate, vehicle_num from " \
+              "TB_GPS_TEMP t where speed_time >= :1 " \
+              "and speed_time < :2 and state = 1 order by speed_time "
+    else:
+        sql = "select px, py, speed_time, state, carstate, vehicle_num from " \
+          "TB_GPS_TEMP t where speed_time >= :1 " \
+          "and speed_time < :2 and vehicle_num = '浙ALT002' and state = 1 order by speed_time "
+
+    tup = (begin_time, end_time)
+    cursor = conn.cursor()
+    cursor.execute(sql, tup)
+    veh_trace = {}
+    for item in cursor.fetchall():
+        lng, lat = map(float, item[0:2])
+        if 119 < lng < 121 and 29 < lat < 31:
+            px, py = bl2xy(lat, lng)
+            state = int(item[3])
+            stime = item[2]
+            speed = 0
+            car_state = int(item[4])
+            ort = 0
+            veh = item[5][-6:]
+            veh_head = veh[:2]
+            # if veh_head != 'AT' and veh_head != 'AL':
+            #     continue
+            # if veh in on_set:
+            #     continue
+            taxi_data = TaxiData(veh, px, py, stime, state, speed, car_state, ort)
+            try:
+                veh_trace[veh].append(taxi_data)
+            except KeyError:
+                veh_trace[veh] = [taxi_data]
+    new_dict = {}
+    for veh, trace in veh_trace.iteritems():
+        new_trace = []
+        last_data = None
+        for data in trace:
+            esti = True
+            if last_data is not None:
+                dist = calc_dist([data.x, data.y], [last_data.x, last_data.y])
+                # 过滤异常
+                if data.car_state == 1:  # 非精确
+                    esti = False
+                elif dist < 15:  # GPS的误差在10米，不准确
+                    esti = False
+            last_data = data
+            if esti:
+                new_trace.append(data)
+                # print i, dist
+                # i += 1
+        new_dict[veh] = new_trace
+    # print "all car:{0}, ave:{1}".format(len(static_num), len(trace) / len(static_num))
+    cursor.close()
+    conn.close()
+    return new_dict
+
+
+@debug_time
 def get_gps_data(all_data=False, begin_time=None, end_time=None):
     if begin_time is None and end_time is None:
         begin_time = datetime(2018, 5, 1, 12, 0, 0)
@@ -113,8 +175,8 @@ def get_gps_data(all_data=False, begin_time=None, end_time=None):
             ort = float(item[6])
             veh = item[7][-6:]
             veh_head = veh[:2]
-            if veh_head != 'AT' and veh_head != 'AL':
-                continue
+            # if veh_head != 'AT' and veh_head != 'AL':
+            #     continue
             if veh in on_set:
                 continue
             # if veh != 'AT0956':
@@ -218,8 +280,8 @@ def get_gps_list(trace_dict):
                 if itv > 180:
                     if len(x_trace) > 1:
                         dist = calc_dist(x_trace[0], x_trace[-1])
-                        if dist > 500:
-                            trace_list.append(x_trace)
+                        # if dist > 500:
+                        trace_list.append(x_trace)
                     x_trace = [data]
                 else:
                     x_trace.append(data)
@@ -228,9 +290,23 @@ def get_gps_list(trace_dict):
             last_data = data
         if len(x_trace) > 1:
             dist = calc_dist(x_trace[0], x_trace[-1])
-            if dist > 500:
-                trace_list.append(x_trace)
+            # if dist > 500:
+            trace_list.append(x_trace)
     for trace in trace_list:
         pt_cnt += len(trace)
 
     return trace_list, pt_cnt
+
+
+def get_def_speed():
+    conn = cx_Oracle.connect('hz/hz@192.168.11.88:1521/orcl')
+    cursor = conn.cursor()
+    sql = "select rid, speed from tb_road_def_speed"
+    cursor.execute(sql)
+    def_speed = {}
+    for item in cursor:
+        rid, speed = item
+        def_speed[rid] = speed
+    cursor.close()
+    conn.close()
+    return def_speed

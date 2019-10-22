@@ -7,6 +7,7 @@
 
 import cx_Oracle
 from collections import defaultdict
+from map_info.readMap import MapInfo
 
 
 def main():
@@ -39,5 +40,34 @@ def main():
         print "oracle error"
 
 
+def def_speed(mi=None):
+    if mi is None:
+        mi = MapInfo("../map_info/hz3.db")
+    rm = mi.road_map
+    try:
+        conn = cx_Oracle.connect('hz/hz@192.168.11.88/orcl')
+        cur = conn.cursor()
+        sql = "select rid, ort, speed, cnt from tb_road_his_speed"
+        cur.execute(sql)
+        tup_list = []
+        for item in cur:
+            lid, ort, speed, cnt = item
+            if cnt < 10 and speed < 20:
+                speed = 20
+            if speed > 80:
+                speed = 80
+            rid = rm[(lid, ort)]
+            tup_list.append((rid, speed))
+        sql = "delete from tb_road_def_speed"
+        cur.execute(sql)
+        sql = "insert into tb_road_def_speed values(:1,:2)"
+        cur.executemany(sql, tup_list)
+        conn.commit()
+        cur.close()
+        conn.close()
+    except cx_Oracle.DatabaseError:
+        print "oracle error"
+
+
 if __name__ == '__main__':
-    main()
+    def_speed()

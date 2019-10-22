@@ -5,14 +5,14 @@
 # @File    : analysisGPS.py
 
 
-from fetchData import get_gps_data, get_gps_list
+from fetchData import get_formal_data, get_gps_list, get_def_speed
 from mapMatching0 import match_trace, static_road_speed
 from collections import defaultdict
 from time import clock
 from map_info.readMap import MapInfo
 import multiprocessing
-from db.saveHisSpeed import save_speed
-from datetime import datetime
+from db.saveHisSpeed import save_speed, save_tti
+from datetime import datetime, timedelta
 
 
 def debug_time(func):
@@ -25,19 +25,6 @@ def debug_time(func):
     return wrapper
 
 
-@debug_time
-def main():
-    trace_dict = get_gps_data()
-    temp_speed = defaultdict(list)
-    mi = MapInfo("./map_info/hz3.db")
-    i = 0
-    for veh, trace in trace_dict.iteritems():
-        match_trace(trace, mi, temp_speed)
-        i += 1
-    road_speed, cnt = static_road_speed(mi, temp_speed)
-    print len(road_speed)
-
-
 def match_process(trace_list, temp_speed):
     mi = MapInfo("./map_info/hz3.db")
     for trace in trace_list:
@@ -46,16 +33,16 @@ def match_process(trace_list, temp_speed):
 
 @debug_time
 def multi_main():
-    trace_dict = get_gps_data(all_data=False)
+    dt = datetime.now() - timedelta(minutes=2)
+    bt = dt - timedelta(minutes=7)
+    trace_dict = get_formal_data(all_data=True, begin_time=bt, end_time=dt)
     trace_list, cnt = get_gps_list(trace_dict)
-    print len(trace_list), cnt
-    if cnt == 0:
-        return
+    print "multi main", len(trace_list), cnt
 
     manager = multiprocessing.Manager()
-    temp_speed = manager.dict()
+    temp_speed = manager.list()
     # 多进程支持
-    thread_num = 1
+    thread_num = 4
     pool = multiprocessing.Pool(processes=thread_num)
     bt = clock()
     for i in range(thread_num):
@@ -65,11 +52,9 @@ def multi_main():
     et = clock()
     print "multi", et - bt
     mi = MapInfo("./map_info/hz3.db")
-    road_speed, cnt = static_road_speed(mi, temp_speed)
-    save_speed(road_speed, datetime.now())
-    for line, spd in road_speed.items():
-        if spd < 5:
-            print line, spd
+    road_speed, cnt_dict = static_road_speed(mi, temp_speed)
+    def_speed = get_def_speed()
+    save_tti(road_speed, cnt_dict, mi, def_speed, dt)
 
 
 if __name__ == '__main__':

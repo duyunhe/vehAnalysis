@@ -15,16 +15,23 @@ def ex():
     ft = datetime(2018, 5, 8)
     filter_veh = set()
     while bt < ft:
-        et = bt + timedelta(hours=4)
-        trace_dict = get_all_data(True, bt, et)
+        bt0 = bt + timedelta(hours=1)
+        et0 = bt + timedelta(hours=5)
+        trace_dict = get_all_data(True, bt0, et0)
         for veh, trace in trace_dict.items():
-            off_cnt, on_cnt = 0, 0
+            off_cnt, on_cnt, on_time = 0, 0, 0
+            last_data = None
             for data in trace:
                 if data.state == 0:
                     off_cnt += 1
                 else:
                     on_cnt += 1
-            if off_cnt == 0 and on_cnt > 240:
+                    if last_data is not None:
+                        itv = data - last_data
+                        on_time += itv
+                last_data = data
+            # print off_cnt, on_time
+            if off_cnt < 10 and on_time > 7200:
                 # print veh, on_cnt
                 filter_veh.add(veh)
         bt += timedelta(days=1)

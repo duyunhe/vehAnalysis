@@ -6,6 +6,7 @@
 
 
 import cx_Oracle
+from tti import get_tti_v0
 
 
 def save_speed_detail(temp_speed):
@@ -56,6 +57,37 @@ def truncate_table():
     cur = conn.cursor()
     sql = "truncate table tb_road_speed_pre"
     cur.execute(sql)
+    conn.commit()
+    cur.close()
+    conn.close()
+
+
+def save_tti(temp_speed, cnt_dict, map_info, def_speed, db_time):
+    """
+    和save speed 一样
+    :param temp_speed: 
+    :param db_time: 
+    :param cnt_dict: 
+    :param map_info: readMap中的road_map 表示(lid, fwd(前进或后退))到rid的对应关系
+    :param def_speed: {rid(int): speed(float)}
+    :return: 
+    """
+    conn = cx_Oracle.connect("hz/hz@192.168.11.88/orcl")
+    tup_list = []
+    for ln, speed in temp_speed.items():
+        cnt = cnt_dict[ln]
+        lid, fwd = ln[0], ln[1]
+        rid = map_info.road_map[(lid, fwd)]
+        try:
+            ti = get_tti_v0(speed, def_speed[rid])
+        except KeyError:
+            ti = 0
+        tup_list.append((rid, speed, cnt, ti, db_time))
+    sql = "truncate table tb_road_speed"
+    cur = conn.cursor()
+    cur.execute(sql)
+    sql = "insert into tb_road_speed values(:1, :2, :3, :4, :5, 1)"
+    cur.executemany(sql, tup_list)
     conn.commit()
     cur.close()
     conn.close()
