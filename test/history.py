@@ -44,6 +44,10 @@ def def_speed(mi=None):
     if mi is None:
         mi = MapInfo("../map_info/hz3.db")
     rm = mi.road_map
+    spd_dict = {}
+    # 确保每一条道路都有值
+    for k, v in rm.items():
+        spd_dict[v] = 40
     try:
         conn = cx_Oracle.connect('hz/hz@192.168.11.88/orcl')
         cur = conn.cursor()
@@ -57,6 +61,8 @@ def def_speed(mi=None):
             if speed > 80:
                 speed = 80
             rid = rm[(lid, ort)]
+            spd_dict[rid] = speed
+        for rid, speed in spd_dict.items():
             tup_list.append((rid, speed))
         sql = "delete from tb_road_def_speed"
         cur.execute(sql)

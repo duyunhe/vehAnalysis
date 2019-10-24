@@ -6,11 +6,13 @@
 
 
 import matplotlib.pyplot as plt
+import cx_Oracle
 import sqlite3
 from map_struct import MapSegment, MapPoint
-from tti import get_tti_b0
+from tti import get_tti_v0
+from coord import bl2xy
 from datetime import datetime, timedelta
-from fetchData import get_gps_data, get_gps_list
+from fetchData import get_gps_data, get_gps_list, get_def_speed
 
 
 def draw_line_idx(segment, idx):
@@ -38,6 +40,31 @@ def load_map():
         last_id = lid
     cur.close()
     conn.close()
+    return seg_list
+
+
+def load_map_orcl():
+    seg_dict = {}
+    conn = cx_Oracle.connect('hz/hz@192.168.11.88/orcl')
+    cur = conn.cursor()
+    sql = "select rid, seq, longitude, latitude from tb_road_point_on_map where map_level = 1" \
+          "order by rid, seq "
+    cur.execute(sql)
+    last_id = -1
+    for item in cur:
+        lid, seq, lng, lat = item[:]
+        px, py = bl2xy(lat, lng)
+        mp = MapPoint(x=px, y=py)
+        if last_id == lid:
+            seg_dict[lid].add_point(mp)
+        else:
+            seg = MapSegment(lid)
+            seg.add_point(mp)
+            seg_dict[lid] = seg
+        last_id = lid
+    cur.close()
+    conn.close()
+    seg_list = [seg for lid, seg in seg_dict.items()]
     return seg_list
 
 
@@ -84,13 +111,13 @@ def draw_seg(segment, c='k'):
 
 
 def tti_color(tti):
-    if tti < 2:
+    if tti > 8:
         return 'r'
-    elif tti < 4:
+    elif tti > 6:
         return 'gold'
-    elif tti < 6:
+    elif tti > 4:
         return 'y'
-    elif tti < 8:
+    elif tti > 2:
         return 'lime'
     else:
         return 'g'
@@ -98,9 +125,14 @@ def tti_color(tti):
 
 def draw_road(seg_list, road_state=None):
     for line in seg_list:
-        draw_seg(line)
-        if line.lid == 4858:
-            draw_line_idx(line, line.lid)
+        if road_state:
+            try:
+                c = tti_color(road_state[line.lid])
+            except KeyError:
+                c = 'g'
+            draw_seg(line, c=c)
+        else:
+            draw_seg(line)
 
 
 def draw_gps(gps_dict):
@@ -114,23 +146,36 @@ def draw_gps(gps_dict):
             plt.text(x_list[i] + 1, y_list[i] + 1, str(i))
 
 
+def get_speed():
+    conn = cx_Oracle.connect('hz/hz@192.168.11.88/orcl')
+    cur = conn.cursor()
+    sql = "select rid, speed, tti from tb_road_speed"
+    cur.execute(sql)
+    road_speed = {}
+    for item in cur:
+        rid, spd, tti = item
+        road_speed[rid] = tti
+    cur.close()
+    conn.close()
+    return road_speed
+
+
 def main():
-    seg_list = load_map()
-    draw_road(seg_list)
-    dt = datetime(2018, 5, 1, 1)
-    gps_dict = get_gps_data(all_data=False, begin_time=dt, end_time=dt + timedelta(hours=1))
-    draw_gps(gps_dict)
+    # seg_list = load_map_orcl()
+    draw_state(road_tti=get_speed())
+    dt = datetime(2018, 5, 1, 12)
+    # gps_dict = get_gps_data(all_data=False, begin_time=dt, end_time=dt + timedelta(hours=1))
+    # draw_gps(gps_dict)
     plt.show()
 
 
-def draw_state(road_speed):
+def draw_state(road_tti):
     road_state = {}
-    for ln, speed in road_speed.items():
-        lid, fwd = ln.lid, ln.fwd
-        uid = lid * 2 + int(fwd)
-        road_state[uid] = get_tti_b0(speed)
-    seg_dict = load_gene()
-    draw_road(seg_dict, road_state)
+    # def_speed = get_def_speed()
+    for rid, tti in road_tti.items():
+        road_state[rid] = tti
+    seg_list = load_map_orcl()
+    draw_road(seg_list, road_state)
 
 
 if __name__ == '__main__':

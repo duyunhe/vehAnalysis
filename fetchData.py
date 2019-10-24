@@ -71,25 +71,28 @@ def get_all_data(all_data=False, begin_time=None, end_time=None):
     return veh_trace
 
 
-def get_all_on(conn):
+def get_all_on():
+    conn = cx_Oracle.connect("hz/hz@192.168.11.88/orcl")
     cur = conn.cursor()
-    sql = "select vehicle_num from tb_all_on"
+    sql = "select vehicle_num, during_time from tb_during_on_time"
     cur.execute(sql)
-    veh_set = set()
+    veh_dict = {}
     for item in cur:
-        veh_set.add(item[0])
+        veh, on_time = item
+        veh_dict[veh] = on_time
     cur.close()
-    return veh_set
+    conn.close()
+    return veh_dict
 
 
 @debug_time
 def get_formal_data(all_data=False, begin_time=None, end_time=None):
     conn = cx_Oracle.connect('hzczdsj/tw85450077@192.168.0.80:1521/orcl')
-    on_set = get_all_on(conn)
+    on_dict = get_all_on()
     if all_data:
         sql = "select px, py, speed_time, state, carstate, vehicle_num from " \
               "TB_GPS_TEMP t where speed_time >= :1 " \
-              "and speed_time < :2 and state = 1 order by speed_time "
+              "and speed_time < :2 and carstate = 0 order by speed_time "
     else:
         sql = "select px, py, speed_time, state, carstate, vehicle_num from " \
           "TB_GPS_TEMP t where speed_time >= :1 " \
@@ -123,25 +126,54 @@ def get_formal_data(all_data=False, begin_time=None, end_time=None):
     for veh, trace in veh_trace.iteritems():
         new_trace = []
         last_data = None
+        try:
+            total_itv = on_dict[veh]
+        except KeyError:
+            total_itv = 0
+
         for data in trace:
             esti = True
+            if data.state == 0:
+                esti = False
             if last_data is not None:
                 dist = calc_dist([data.x, data.y], [last_data.x, last_data.y])
                 # 过滤异常
-                if data.car_state == 1:  # 非精确
+                if dist < 10:  # GPS的误差在10米，不准确
                     esti = False
-                elif dist < 15:  # GPS的误差在10米，不准确
-                    esti = False
+                if data.state == 0:
+                    total_itv = 0
+                else:
+                    total_itv += data - last_data
             last_data = data
             if esti:
                 new_trace.append(data)
                 # print i, dist
                 # i += 1
-        new_dict[veh] = new_trace
+        # 假如重车时间太长（超过两个小时），那么可能存在问题
+        if total_itv < 7200:
+            new_dict[veh] = new_trace
+        on_dict[veh] = total_itv
     # print "all car:{0}, ave:{1}".format(len(static_num), len(trace) / len(static_num))
     cursor.close()
     conn.close()
-    return new_dict
+    return new_dict, on_dict
+
+
+def save_all_on(on_dict):
+    """
+    :param on_dict: {veh: during_time(seconds)} 
+    :return: 
+    """
+    conn = cx_Oracle.connect('hz/hz@192.168.11.88:1521/orcl')
+    cursor = conn.cursor()
+    sql = "delete from tb_during_on_time"
+    cursor.execute(sql)
+    tup_list = []
+    for veh, on_time in on_dict.items():
+        tup_list.append((veh, on_time))
+    cursor.executemany(sql, tup_list)
+    cursor.close()
+    conn.close()
 
 
 @debug_time
@@ -150,7 +182,7 @@ def get_gps_data(all_data=False, begin_time=None, end_time=None):
         begin_time = datetime(2018, 5, 1, 12, 0, 0)
         end_time = begin_time + timedelta(minutes=60)
     conn = cx_Oracle.connect('hz/hz@192.168.11.88:1521/orcl')
-    on_set = get_all_on(conn)
+    on_set = get_all_on()
     if all_data:
         sql = "select px, py, speed_time, state, speed, carstate, direction, vehicle_num from " \
               "TB_GPS_1805 t where speed_time >= :1 " \

@@ -33,9 +33,9 @@ def match_process(trace_list, temp_speed):
 
 @debug_time
 def multi_main():
-    dt = datetime.now() - timedelta(minutes=2)
-    bt = dt - timedelta(minutes=7)
-    trace_dict = get_formal_data(all_data=True, begin_time=bt, end_time=dt)
+    dt = datetime.now() - timedelta(minutes=1)
+    bt = dt - timedelta(minutes=6)
+    trace_dict, on_time_dict = get_formal_data(all_data=True, begin_time=bt, end_time=dt)
     trace_list, cnt = get_gps_list(trace_dict)
     print "multi main", len(trace_list), cnt
 
