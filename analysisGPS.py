@@ -42,7 +42,7 @@ def multi_main():
     manager = multiprocessing.Manager()
     temp_speed = manager.list()
     # 多进程支持
-    thread_num = 4
+    thread_num = 16
     pool = multiprocessing.Pool(processes=thread_num)
     bt = clock()
     for i in range(thread_num):
@@ -54,7 +54,7 @@ def multi_main():
     mi = MapInfo("./map_info/hz3.db")
     road_speed, cnt_dict = static_road_speed(mi, temp_speed)
     def_speed = get_def_speed()
-    save_tti(road_speed, cnt_dict, mi, def_speed, dt)
+    save_tti(road_speed, cnt_dict, def_speed, dt)
 
 
 if __name__ == '__main__':

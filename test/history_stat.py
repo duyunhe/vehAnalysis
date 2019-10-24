@@ -53,7 +53,8 @@ def multi_main(bt, all_data=True):
     # print "multi", et - bt
     mi = MapInfo("../map_info/hz3.db")
     road_speed, cnt = static_road_speed(mi, temp_speed)
-    save_speed(road_speed, bt, cnt)
+    pass
+    # save_speed(road_speed, bt, cnt)
 
 
 def main():
@@ -71,7 +72,7 @@ def main():
 
 def main1():
     truncate_table()
-    bt = datetime(2018, 5, 1, 1)
+    bt = datetime(2018, 5, 1, 12)
     multi_main(bt)
 
 

@@ -549,21 +549,22 @@ def get_road_speed(trace, match_records, temp_speed, map_info):
     # static should be overall, calculated later
 
 
+@debug_time
 def static_road_speed(map_info, temp_speed):
     """
     :param map_info
     :param temp_speed: [list [ speed0, dist0, veh, time, i], .. ]
-    :return: road_speed : Dict { (lid, fwd): speed }
+    :return: road_speed : Dict { rid: speed }
     """
     road_speed, total_speed = {}, defaultdict(float)
     speed_cnt, speed_weight = defaultdict(int), defaultdict(float)
     for spd_list in temp_speed:
         ln, spd, dist, _, _ = spd_list
-        # ln = map_info.reverse_map[rid]
-        speed_cnt[ln] += 1
-        total_speed[ln] += spd * dist
-        speed_weight[ln] += dist
-    for ln, total in total_speed.items():
-        if speed_weight[ln] != 0:
-            road_speed[ln] = total_speed[ln] / speed_weight[ln]
+        rid = map_info.road_map[ln]
+        speed_cnt[rid] += 1
+        total_speed[rid] += spd * dist
+        speed_weight[rid] += dist
+    for rid, total in total_speed.items():
+        if speed_weight[rid] != 0:
+            road_speed[rid] = total_speed[rid] / speed_weight[rid]
     return road_speed, speed_cnt
