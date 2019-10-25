@@ -549,7 +549,7 @@ def get_road_speed(trace, match_records, temp_speed, map_info):
     # static should be overall, calculated later
 
 
-@debug_time
+# @debug_time
 def static_road_speed(map_info, temp_speed):
     """
     :param map_info

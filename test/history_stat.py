@@ -33,9 +33,9 @@ def match_process(trace_list, temp_speed):
 
 @debug_time
 def multi_main(bt, all_data=True):
-    et = bt + timedelta(hours=1)
+    et = bt + timedelta(hours=2)
     trace_dict = get_gps_data(all_data=all_data, begin_time=bt, end_time=et)
-    trace_list, cnt = get_gps_list(trace_dict)
+    trace_list, cnt = get_gps_list(trace_dict, history=True)
     print len(trace_list), cnt
     if cnt == 0:
         return
@@ -53,11 +53,11 @@ def multi_main(bt, all_data=True):
     # print "multi", et - bt
     mi = MapInfo("../map_info/hz3.db")
     road_speed, cnt = static_road_speed(mi, temp_speed)
-    pass
-    # save_speed(road_speed, bt, cnt)
+    save_speed(road_speed, bt, cnt)
 
 
 def main():
+    truncate_table()
     bt = datetime(2018, 5, 1)
     ft = datetime(2018, 6, 1)
     while bt < ft:
@@ -66,15 +66,15 @@ def main():
         while bt0 < ft0:
             print bt0
             multi_main(bt0)
-            bt0 += timedelta(hours=1)
+            bt0 += timedelta(hours=2)
         bt += timedelta(days=1)
 
 
 def main1():
     truncate_table()
-    bt = datetime(2018, 5, 1, 12)
-    multi_main(bt)
+    bt = datetime(2018, 5, 1, 1)
+    multi_main(bt, True)
 
 
 if __name__ == '__main__':
-    main1()
+    main()

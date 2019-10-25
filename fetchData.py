@@ -156,6 +156,7 @@ def get_formal_data(all_data=False, begin_time=None, end_time=None):
     # print "all car:{0}, ave:{1}".format(len(static_num), len(trace) / len(static_num))
     cursor.close()
     conn.close()
+    save_all_on(on_dict)
     return new_dict, on_dict
 
 
@@ -169,28 +170,36 @@ def save_all_on(on_dict):
     sql = "delete from tb_during_on_time"
     cursor.execute(sql)
     tup_list = []
+    sql = "insert into tb_during_on_time values(:1,:2)"
     for veh, on_time in on_dict.items():
         tup_list.append((veh, on_time))
     cursor.executemany(sql, tup_list)
+    conn.commit()
     cursor.close()
     conn.close()
 
 
 @debug_time
 def get_gps_data(all_data=False, begin_time=None, end_time=None):
+    """
+    历史数据，采纳两小时的GPS数据
+    :param all_data: 
+    :param begin_time: 
+    :param end_time: 
+    :return: 
+    """
     if begin_time is None and end_time is None:
         begin_time = datetime(2018, 5, 1, 12, 0, 0)
         end_time = begin_time + timedelta(minutes=60)
     conn = cx_Oracle.connect('hz/hz@192.168.11.88:1521/orcl')
-    on_set = get_all_on()
     if all_data:
         sql = "select px, py, speed_time, state, speed, carstate, direction, vehicle_num from " \
               "TB_GPS_1805 t where speed_time >= :1 " \
-              "and speed_time < :2 and state = 1 order by speed_time "
+              "and speed_time < :2 and carstate = '0' order by speed_time "
     else:
         sql = "select px, py, speed_time, state, speed, carstate, direction, vehicle_num from " \
           "TB_GPS_1805 t where speed_time >= :1 " \
-          "and speed_time < :2 and vehicle_num = '浙ALT002' and state = 1 order by speed_time "
+          "and speed_time < :2 and vehicle_num = '浙AT7484' and carstate = '0' order by speed_time "
 
     tup = (begin_time, end_time)
     cursor = conn.cursor()
@@ -209,8 +218,6 @@ def get_gps_data(all_data=False, begin_time=None, end_time=None):
             veh_head = veh[:2]
             # if veh_head != 'AT' and veh_head != 'AL':
             #     continue
-            if veh in on_set:
-                continue
             # if veh != 'AT0956':
             #     continue
             taxi_data = TaxiData(veh, px, py, stime, state, speed, car_state, ort)
@@ -222,20 +229,28 @@ def get_gps_data(all_data=False, begin_time=None, end_time=None):
     for veh, trace in veh_trace.iteritems():
         new_trace = []
         last_data = None
+        on_cnt, off_cnt = 0, 0
         for data in trace:
             esti = True
+            if data.state == 1:
+                on_cnt += 1
+            else:
+                off_cnt += 1
             if last_data is not None:
                 dist = calc_dist([data.x, data.y], [last_data.x, last_data.y])
                 # 过滤异常
-                if data.car_state == 1:  # 非精确
+                if data.state == 0:
                     esti = False
-                elif dist < 20:  # GPS的误差在10米，不准确
+                if dist < 10:  # GPS的误差在10米，不准确
                     esti = False
             last_data = data
             if esti:
                 new_trace.append(data)
                 # print i, dist
                 # i += 1
+        per = float(on_cnt) / (on_cnt + off_cnt)
+        if per > 0.9:
+            continue
         new_dict[veh] = new_trace
     # print "all car:{0}, ave:{1}".format(len(static_num), len(trace) / len(static_num))
     cursor.close()
@@ -281,39 +296,29 @@ def main():
     trans2redis(trace_dict)
 
 
-def get_gps_list(trace_dict):
+def get_gps_list(trace_dict, history=False):
     """
     :param trace_dict: 
+    :param history: 是否统计历史数据
     :return: 
     """
     trace_list = []
     pt_cnt = 0
     for veh, trace in trace_dict.iteritems():
-        new_trace = []
-        last_data = None
-        for data in trace:
-            esti = True
-            if last_data is not None:
-                dist = calc_dist([data.x, data.y], [last_data.x, last_data.y])
-                # print data - last_data
-                # 过滤异常
-                if data.car_state == 1:  # 非精确
-                    esti = False
-                elif dist < 10:  # GPS的误差在10米，不准确
-                    esti = False
-            last_data = data
-            if esti:
-                new_trace.append(data)
+        new_trace = trace
         last_data = None
         x_trace = []
         for data in new_trace:
             if last_data is not None:
                 itv = data - last_data
-                if itv > 180:
+                if itv > 300:
                     if len(x_trace) > 1:
                         dist = calc_dist(x_trace[0], x_trace[-1])
-                        # if dist > 500:
-                        trace_list.append(x_trace)
+                        if history:
+                            if dist > 1000:
+                                trace_list.append(x_trace)
+                        else:
+                            trace_list.append(x_trace)
                     x_trace = [data]
                 else:
                     x_trace.append(data)
@@ -322,8 +327,11 @@ def get_gps_list(trace_dict):
             last_data = data
         if len(x_trace) > 1:
             dist = calc_dist(x_trace[0], x_trace[-1])
-            # if dist > 500:
-            trace_list.append(x_trace)
+            if history:
+                if dist > 1000:
+                    trace_list.append(x_trace)
+            else:
+                trace_list.append(x_trace)
     for trace in trace_list:
         pt_cnt += len(trace)
 

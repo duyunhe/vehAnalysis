@@ -8,6 +8,8 @@
 from fetchData import get_formal_data, get_gps_list, get_def_speed
 from mapMatching0 import match_trace, static_road_speed
 from collections import defaultdict
+import logging
+from apscheduler.schedulers.blocking import BlockingScheduler
 from time import clock
 from map_info.readMap import MapInfo
 import multiprocessing
@@ -34,6 +36,7 @@ def match_process(trace_list, temp_speed):
 @debug_time
 def multi_main():
     dt = datetime.now() - timedelta(minutes=1)
+    print "main", dt
     bt = dt - timedelta(minutes=6)
     trace_dict, on_time_dict = get_formal_data(all_data=True, begin_time=bt, end_time=dt)
     trace_list, cnt = get_gps_list(trace_dict)
@@ -58,4 +61,7 @@ def multi_main():
 
 
 if __name__ == '__main__':
-    multi_main()
+    logging.basicConfig()
+    scheduler = BlockingScheduler()
+    scheduler.add_job(multi_main, 'cron', minute='0,5,10,15,20,25,30,35,40,45,50,55', max_instances=10)
+    scheduler.start()

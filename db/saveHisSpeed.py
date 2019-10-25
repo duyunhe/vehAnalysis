@@ -44,18 +44,17 @@ def save_speed_detail(temp_speed):
 
 def save_speed(temp_speed, dt, cnt_dict):
     """
-    :param temp_speed: { (lid, fwd): speed }
+    :param temp_speed: { rid: speed }
     :param dt: datetime
-    :param cnt_dict: { (lid, fwd) : cnt }
+    :param cnt_dict: { rid : cnt }
     :return: 
     """
     conn = cx_Oracle.connect("hz/hz@192.168.11.88/orcl")
     tup_list = []
-    for ln, speed in temp_speed.items():
-        cnt = cnt_dict[ln]
-        lid, fwd = ln[0], '1' if ln[1] else '0'
-        tup_list.append((lid, speed, fwd, dt, cnt))
-    ins_sql = "insert into tb_road_speed_pre (rid, speed, ort, dbtime, cnt) values(:1, :2, :3, :4, :5)"
+    for rid, speed in temp_speed.items():
+        cnt = cnt_dict[rid]
+        tup_list.append((rid, speed, dt, cnt))
+    ins_sql = "insert into tb_road_speed_pre (rid, speed, dbtime, cnt) values(:1, :2, :3, :4)"
     cur = conn.cursor()
     cur.executemany(ins_sql, tup_list)
     conn.commit()
@@ -73,25 +72,27 @@ def truncate_table():
     conn.close()
 
 
-def save_tti(temp_speed, cnt_dict, def_speed, db_time):
+def save_tti(temp_speed, cnt_dict, def_speed_dict, db_time):
     """
     和save speed 一样
     :param temp_speed: {rid: speed}
     :param db_time: 
     :param cnt_dict: 
-    :param def_speed: {rid(int): speed(float)}
+    :param def_speed_dict: {rid(int): speed(float)}
     :return: 
     """
     conn = cx_Oracle.connect("hz/hz@192.168.11.88/orcl")
     tup_list = []
-    for rid, speed in temp_speed.items():
-        cnt = cnt_dict[rid]
+    for rid, def_speed in def_speed_dict.items():
+        try:
+            cnt = cnt_dict[rid]
+            speed = temp_speed[rid]
+        except KeyError:
+            cnt = 0
+            speed = def_speed_dict[rid]
         # lid, fwd = ln[0], ln[1]
         # rid = map_info.road_map[(lid, fwd)]
-        try:
-            ti = get_tti_v1(speed, def_speed[rid])
-        except KeyError:
-            ti = 0
+        ti = get_tti_v1(speed, def_speed)
         tup_list.append((rid, speed, cnt, ti, db_time))
     sql = "truncate table tb_road_speed"
     cur = conn.cursor()
