@@ -100,6 +100,7 @@ def read_sqlite(filename):
                     line.point_list[i].add_link(ld, line.point_list[i + 1])
 
     sql = "select lid, fwd, rid from tb_map"
+    # fwd 和道路记录的点顺序正向1 反向0
     cur.execute(sql)
     road_map, reverse_map = {}, {}
     for item in cur:

@@ -34,10 +34,15 @@ def match_process(trace_list, temp_speed):
 
 
 @debug_time
-def multi_main():
+def multi_main(history):
+    """
+    该函数在5分钟内将调用两次，一次是五分钟整，一次是2分半
+    :param history: 整五分钟的计算需要记录到历史数据库，反之不需要记录 
+    :return: 
+    """
     run_time = datetime.now()
     dt = run_time - timedelta(minutes=1)
-    print "main", run_time
+    print "****** main ******", run_time
     bt = dt - timedelta(minutes=6)
     trace_dict, on_time_dict = get_formal_data(all_data=True, begin_time=bt, end_time=dt)
     trace_list, cnt = get_gps_list(trace_dict)
@@ -48,22 +53,23 @@ def multi_main():
     # 多进程支持
     thread_num = 16
     pool = multiprocessing.Pool(processes=thread_num)
-    bt = clock()
     for i in range(thread_num):
         pool.apply_async(match_process, args=(trace_list[i::thread_num], temp_speed))
     pool.close()
     pool.join()
-    et = clock()
-    print "multi", et - bt
     mi = MapInfo("./map_info/hz3.db")
     road_speed, cnt_dict = static_road_speed(mi, temp_speed)
     def_speed = get_def_speed()
-    save_tti(road_speed, cnt_dict, def_speed, run_time)
+    save_tti(road_speed, cnt_dict, def_speed, run_time, history)
 
 
 if __name__ == '__main__':
     logging.basicConfig()
     scheduler = BlockingScheduler()
-    scheduler.add_job(func=multi_main, trigger='cron', minute='*/5', max_instances=10)
-    scheduler.add_job(func=multi_main, trigger='cron', minute='2-58/5', max_instances=10)
+    with_history = {"history": True}
+    without_history = {"history": False}
+    scheduler.add_job(func=multi_main, trigger='cron', kwargs=with_history,
+                      minute='*/5', max_instances=10)
+    scheduler.add_job(func=multi_main, trigger='cron', kwargs=without_history,
+                      minute='2-58/5', second='30', max_instances=10)
     scheduler.start()
