@@ -35,8 +35,9 @@ def match_process(trace_list, temp_speed):
 
 @debug_time
 def multi_main():
-    dt = datetime.now() - timedelta(minutes=1)
-    print "main", dt
+    run_time = datetime.now()
+    dt = run_time - timedelta(minutes=1)
+    print "main", run_time
     bt = dt - timedelta(minutes=6)
     trace_dict, on_time_dict = get_formal_data(all_data=True, begin_time=bt, end_time=dt)
     trace_list, cnt = get_gps_list(trace_dict)
@@ -57,11 +58,12 @@ def multi_main():
     mi = MapInfo("./map_info/hz3.db")
     road_speed, cnt_dict = static_road_speed(mi, temp_speed)
     def_speed = get_def_speed()
-    save_tti(road_speed, cnt_dict, def_speed, dt)
+    save_tti(road_speed, cnt_dict, def_speed, run_time)
 
 
 if __name__ == '__main__':
     logging.basicConfig()
     scheduler = BlockingScheduler()
-    scheduler.add_job(multi_main, 'cron', minute='0,5,10,15,20,25,30,35,40,45,50,55', max_instances=10)
+    scheduler.add_job(func=multi_main, trigger='cron', minute='*/5', max_instances=10)
+    scheduler.add_job(func=multi_main, trigger='cron', minute='2-58/5', max_instances=10)
     scheduler.start()

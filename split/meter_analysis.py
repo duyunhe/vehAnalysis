@@ -168,8 +168,8 @@ def order_match_v1(veh, m_list, trace_list):
     """
     without off_time
     :param veh: 
-    :param m_list: 
-    :param trace_list: 
+    :param m_list: meter_data list
+    :param trace_list: gps_data list
     :return: tup_list: list of tup(cbid, jc, ks), del_list: list of cbid
     """
     len_m, len_t = len(m_list), len(trace_list)
@@ -218,7 +218,7 @@ def update_order(conn, upd_list, del_list):
     cur.close()
 
 
-def match(meter_dict, off_dict, trace_dict):
+def match(meter_dict, trace_dict):
     match_cnt, meter_cnt, del_cnt = 0, 0, 0
     no_trace_cnt = 0
     no_off_cnt = 0
@@ -226,21 +226,18 @@ def match(meter_dict, off_dict, trace_dict):
     for veh, m_list in meter_dict.items():
         if veh != 'AT3692':
             continue
+        no_off_cnt += len(m_list)
+        # print veh, "no off time"
         try:
-            off_time = off_dict[veh]
+            trace_list = trace_dict[veh]
         except KeyError:
-            no_off_cnt += len(m_list)
-            # print veh, "no off time"
-            try:
-                trace_list = trace_dict[veh]
-            except KeyError:
-                no_trace_cnt += len(m_list)
-                # print veh, "no trace list"
-                continue
-            tup_list, del_list = order_match_v1(veh, m_list, trace_list)
-            match_cnt += len(tup_list)
-            del_cnt += len(del_list)
+            no_trace_cnt += len(m_list)
+            # print veh, "no trace list"
             continue
+        tup_list, del_list = order_match_v1(veh, m_list, trace_list)
+        match_cnt += len(tup_list)
+        del_cnt += len(del_list)
+
         try:
             trace_list = trace_dict[veh]
         except KeyError:
@@ -263,9 +260,9 @@ def proc():
     bt = datetime(2018, 5, 1, 14, 0)
     et = datetime(2018, 5, 1, 15, 0)
     meter_dict = get_meter_data(bt, et)
-    off_dict = get_offset(bt)
+    # off_dict = get_offset(bt)
     trace_dict = get_trace(bt, et)
-    match(meter_dict, off_dict, trace_dict)
+    match(meter_dict, trace_dict)
 
 
 if __name__ == '__main__':

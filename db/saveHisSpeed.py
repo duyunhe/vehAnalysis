@@ -99,6 +99,8 @@ def save_tti(temp_speed, cnt_dict, def_speed_dict, db_time):
     cur.execute(sql)
     sql = "insert into tb_road_speed values(:1, :2, :3, :4, :5, 1)"
     cur.executemany(sql, tup_list)
+    sql = "insert into tb_road_speed_his values(:1, :2, :3, :4, :5, 1)"
+    cur.executemany(sql, tup_list)
     conn.commit()
     cur.close()
     conn.close()
