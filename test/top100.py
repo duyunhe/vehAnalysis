@@ -16,7 +16,7 @@ def main():
     road_map, reverse_map = get_map()
     conn = cx_Oracle.connect("hz/hz@192.168.11.88/orcl")
     cursor = conn.cursor()
-    dt = datetime.now()
+    dt = datetime(2019, 10, 30)
     bt = datetime(2019, 10, 28)
     sql = "select rid, sample_num from tb_road_speed_his where dbtime < :1 and dbtime >= :2"
     cursor.execute(sql, (dt, bt))
@@ -36,11 +36,11 @@ def main():
         print name, c
         for rid in reverse_map[name]:
             tup_list.append((name, rid))
-    sql = "delete from tb_top100"
-    cursor.execute(sql)
-    sql = "insert into tb_top100 values(:1, :2)"
-    cursor.executemany(sql, tup_list)
-    conn.commit()
+    # sql = "delete from tb_top100"
+    # cursor.execute(sql)
+    # sql = "insert into tb_top100 values(:1, :2)"
+    # cursor.executemany(sql, tup_list)
+    # conn.commit()
     cursor.close()
     conn.close()
 
@@ -82,4 +82,4 @@ def highway():
 
 
 if __name__ == "__main__":
-    highway()
+    main()

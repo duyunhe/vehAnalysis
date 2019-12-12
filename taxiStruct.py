@@ -4,9 +4,12 @@
 # @简介    : 
 # @File    : taxiStruct.py
 
+from datetime import datetime
+
 
 class TaxiData:
-    def __init__(self, veh, px, py, stime, state, speed, car_state, direction):
+    def __init__(self, veh="", px=0, py=0, stime=datetime(2019, 1, 1), state=0,
+                 speed=0, car_state=0, direction=0):
         self.veh = veh
         self.x, self.y, self.stime, self.state, self.speed = px, py, stime, state, speed
         self.car_state, self.direction = car_state, direction

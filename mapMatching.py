@@ -287,6 +287,7 @@ def init_queue(queue, map_index, last_mp, match_record, euclid_dist, cur_point, 
             ort = path_forward(last_mp, cur_mp, last_mp.line, seq)
             path = LinePath(dist, last_mp.line, ort)
             ti.line_path.append(path)
+            ti.pt_path = [last_mp, cur_mp]
             match_record.add_trans_info(ti)
 
     # add two endpoints in segment
@@ -368,18 +369,23 @@ def search_node(queue, map_index, match_record, dist_config, last_match_point,
                     ort = path_forward(cur_pt, cur_mp, line, seq)
                     path = LinePath(dist, line, ort)
                     ti.line_path.append(path)
+                    ti.pt_path.append(cur_mp)
+                    ti.pt_path.append(cur_pt)
                     pt = cur_pt
                     while pt is not None:
                         last_state = come_from[pt]
                         last_line, last_point, last_ort = last_state.line, last_state.point, last_state.ort
                         if last_point is None:              # already first point(last_match_point)
                             dist = calc_point_dist(last_match_point, pt)
+                            ti.pt_path.append(last_match_point)
                         else:
                             dist = calc_point_dist(pt, last_point)
+                            ti.pt_path.append(last_point)
                         path = LinePath(dist, last_line, last_ort)
                         ti.line_path.append(path)
                         pt = last_point
                     ti.line_path.reverse()
+                    ti.pt_path.reverse()
                     match_record.add_trans_info(ti)
 
                     # update thread
@@ -555,3 +561,27 @@ def static_road_speed(map_info, temp_speed):
     # for key in keys:
     #     print key, road_speed[key]
     return road_speed, speed_cnt
+
+
+def match_path(trace, map_info):
+    """
+    :param trace: list[TaxiData]
+    :param map_info: MapInfo
+    :return: 
+    """
+    if len(trace) == 0:
+        return
+    trace_match = []        # MatchRecord
+    for i, gps_data in enumerate(trace):
+        # 1. find all possibility
+        candidate = get_candidate(gps_data, map_info)
+        # 2. calculate emit prob.
+        ramp, map_index = match_single(candidate, trace, i, trace_match)
+        # 3. calculate trans prob.
+        if i > 0:
+            match_latter(map_index, trace, i, trace_match, ramp)
+        # 4. global prob. dynamic programming -- as hidden markov model
+        match_best(trace_match, i)
+    # find path
+    global_match(trace_match)
+    return trace_match

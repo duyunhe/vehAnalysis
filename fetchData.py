@@ -57,8 +57,8 @@ def get_all_data(all_data=False, begin_time=None, end_time=None):
             ort = float(item[6])
             veh = item[7][-6:]
             veh_head = veh[:2]
-            if veh_head != 'AT' and veh_head != 'AL':
-                continue
+            # if veh_head != 'AT' and veh_head != 'AL':
+            #     continue
             # if veh != 'AT0956':
             #     continue
             taxi_data = TaxiData(veh, px, py, stime, state, speed, car_state, ort)
